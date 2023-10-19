@@ -43,7 +43,7 @@ class NineMenMorris:
             if pass_turn and self.current_player.ai and not self.is_game_over():
                 # Instantaneously execute the AI turn.
                 ai: AI = self.current_player.ai
-                moves = self.rules.get_current_player_moves()
+                moves = self.rules.iter_current_moves()
                 choice = ai.select_move(moves)
                 print("AI choice:", choice)
                 self.rules.execute_move(choice)

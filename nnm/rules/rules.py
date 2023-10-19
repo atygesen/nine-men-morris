@@ -19,13 +19,13 @@ class Candidate:
     pass
 
 
-@dataclass
+@dataclass(slots=True)
 class CandidatePlacement:
     spot: SPOT
     delete_spot: SPOT | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CandidateMove:
     from_spot: SPOT
     to_spot: SPOT
@@ -51,7 +51,7 @@ class Rules:
             return self.get_phase_three_moves()
         
 
-    def _iter_current_moves(self):
+    def iter_current_moves(self):
         phase = self.get_phase()
         if phase is Phase.DONE:
             return []
@@ -92,12 +92,12 @@ class Rules:
 
     @contextmanager
     def temp_place_piece(self, spot: SPOT):
-        self.board.place_piece(spot)
+        self.board.place_piece(spot, remove_piece=False)
         try:
             yield
         finally:
             self.board.delete_spot(spot, force=True)
-            self.current_player.pieces_on_hand += 1
+            # self.current_player.pieces_on_hand += 1
 
     @contextmanager
     def temp_move_piece(self, from_spot: SPOT, to_spot: SPOT):
@@ -115,7 +115,9 @@ class Rules:
 
     def get_phase_one_moves(self) -> list[SPOT]:
         # Available positions to place in phase 1
-        moves = []
+        return list(self.iter_phase_one_moves())
+    
+    def iter_phase_one_moves(self):
         for spot, owner in self.board.pieces.items():
             if owner is None:
                 # moves.append(CandidatePlacement(spot))
@@ -125,13 +127,9 @@ class Rules:
                         must_contain=spot, player=self.current_player
                     ):
                         for to_delete in self._iter_to_delete():
-                            moves.append(
-                                CandidatePlacement(spot, delete_spot=to_delete)
-                            )
+                           yield CandidatePlacement(spot, delete_spot=to_delete)
                     else:
-                        moves.append(CandidatePlacement(spot))
-
-        return moves
+                        yield CandidatePlacement(spot)
 
     def iter_phase_two_three_moves(self, phase=Phase.TWO) -> Iterator[CandidateMove]:
         current_pices = self.board.get_owned_player_spots(self.current_player)
@@ -192,7 +190,7 @@ class Rules:
     def is_game_over(self) -> bool:
         if self.get_phase() is Phase.DONE:
             return True
-        for _ in self._iter_current_moves():
+        for _ in self.iter_current_moves():
             # If there is any valid move, we aren't done.
             return False
         return True

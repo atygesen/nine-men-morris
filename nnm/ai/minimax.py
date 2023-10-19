@@ -58,7 +58,7 @@ class MinimaxAI:
         elif depth == self.max_depth:
             return self.get_piece_diff()
 
-        moves = self.rules.get_current_player_moves()
+        moves = self.rules.iter_current_moves()
         if is_maximizing:
             best_eval = MIN_FLOAT
             for move in moves:
