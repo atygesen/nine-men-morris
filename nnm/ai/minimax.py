@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Sequence
 
 from nnm.rules.rules import CandidateMove, CandidatePlacement, Rules
 from nnm.board import Player, Board
@@ -23,11 +23,12 @@ class MinimaxAI:
     def board(self) -> Board:
         return self.rules.board
 
-    def select_move(self, moves: Iterable[CandidatePlacement] | Iterable[CandidateMove]):
+    def select_move(self, moves: Sequence[CandidatePlacement] | Sequence[CandidateMove]):
         
         best_score = float("-inf")
         best_move = None
         for move in moves:
+
             self.rules.execute_move(move)  # Will flip the move turn
             score = self.minimax(0, False)
             self.rules.undo_move(move)
@@ -53,14 +54,11 @@ class MinimaxAI:
 
     def minimax(self, depth: int, is_maximizing: bool):
         if self.rules.is_game_over():
-            if is_maximizing:
-                return MIN_FLOAT
-            else:
-                return MAX_FLOAT
+            return MAX_FLOAT_LOOPUP[is_maximizing]
         elif depth == self.max_depth:
             return self.get_piece_diff()
 
-        moves = self.rules.iter_current_player_moves()
+        moves = self.rules.get_current_player_moves()
         if is_maximizing:
             best_eval = MIN_FLOAT
             for move in moves:

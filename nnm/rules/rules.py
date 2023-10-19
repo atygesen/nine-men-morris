@@ -36,13 +36,28 @@ class Rules:
     def __init__(self, board: Board):
         self.board = board
 
-    def iter_current_player_moves(self):
+    def get_current_player_moves(
+        self,
+    ) -> list[CandidatePlacement] | list[CandidateMove]:
         phase = self.get_phase()
         if phase is Phase.DONE:
             return []
 
         if phase is Phase.ONE:
-            yield from self.iter_phase_one_moves()
+            return self.get_phase_one_moves()
+        elif phase is Phase.TWO:
+            return self.get_phase_two_moves()
+        else:
+            return self.get_phase_three_moves()
+        
+
+    def _iter_current_moves(self):
+        phase = self.get_phase()
+        if phase is Phase.DONE:
+            return []
+
+        if phase is Phase.ONE:
+            yield from self.get_phase_one_moves()
         elif phase is Phase.TWO:
             yield from self.iter_phase_two_three_moves(phase=Phase.TWO)
         else:
@@ -98,21 +113,25 @@ class Rules:
             if can_delete:
                 yield to_delete
 
-    def iter_phase_one_moves(self) -> list[SPOT]:
+    def get_phase_one_moves(self) -> list[SPOT]:
         # Available positions to place in phase 1
+        moves = []
         for spot, owner in self.board.pieces.items():
-            if owner is not None:
-                continue
-            # Check if we made a mill
-            with self.temp_place_piece(spot):
-                if self.board.has_three_in_a_line(
-                    must_contain=spot, player=self.current_player
-                ):
-                    for to_delete in self._iter_to_delete():
-                        yield CandidatePlacement(spot, delete_spot=to_delete)
-                        
-                else:
-                    yield CandidatePlacement(spot)
+            if owner is None:
+                # moves.append(CandidatePlacement(spot))
+                # Check if we made a mill
+                with self.temp_place_piece(spot):
+                    if self.board.has_three_in_a_line(
+                        must_contain=spot, player=self.current_player
+                    ):
+                        for to_delete in self._iter_to_delete():
+                            moves.append(
+                                CandidatePlacement(spot, delete_spot=to_delete)
+                            )
+                    else:
+                        moves.append(CandidatePlacement(spot))
+
+        return moves
 
     def iter_phase_two_three_moves(self, phase=Phase.TWO) -> Iterator[CandidateMove]:
         current_pices = self.board.get_owned_player_spots(self.current_player)
@@ -173,7 +192,7 @@ class Rules:
     def is_game_over(self) -> bool:
         if self.get_phase() is Phase.DONE:
             return True
-        for _ in self.iter_current_player_moves():
+        for _ in self._iter_current_moves():
             # If there is any valid move, we aren't done.
             return False
         return True
