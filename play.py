@@ -9,10 +9,13 @@ game = NineMenMorris(screen)
 
 running = True
 while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        game.event_handler(event)
+    if game.is_ai_turn() and not game.is_game_over():
+        game.play_ai()
+    else:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            game.event_handler(event)
     game.draw()
     pygame.display.flip()
 

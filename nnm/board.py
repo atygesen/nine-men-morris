@@ -281,5 +281,5 @@ class Board:
         return {p: len(v) for p, v in self.pieces_by_player.items()}
 
     def get_owned_player_spots(self, player: Player) -> set[SPOT]:
-        return [pos for pos, owner in self.pieces.items() if player is owner]
-        # return self.pieces_by_player[player]
+        # return [pos for pos, owner in self.pieces.items() if player is owner]
+        return self.pieces_by_player[player]

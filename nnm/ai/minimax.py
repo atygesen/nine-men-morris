@@ -6,14 +6,11 @@ from nnm.board import Player, Board
 MIN_FLOAT = float("-inf")
 MAX_FLOAT = float("inf")
 
-MAX_FLOAT_LOOPUP = {
-    True: MAX_FLOAT,
-    False: MIN_FLOAT,
-}
 
 class MinimaxAI:
-
-    def __init__(self, me: Player, other: Player, rules: Rules, max_depth: int=3) -> None:
+    def __init__(
+        self, me: Player, other: Player, rules: Rules, max_depth: int = 3
+    ) -> None:
         self.rules = rules
         self.max_depth = max_depth
         self.me = me
@@ -23,8 +20,10 @@ class MinimaxAI:
     def board(self) -> Board:
         return self.rules.board
 
-    def select_move(self, moves: Sequence[CandidatePlacement] | Sequence[CandidateMove]):
-        best_score = float("-inf")
+    def select_move(
+        self, moves: Sequence[CandidatePlacement] | Sequence[CandidateMove]
+    ):
+        best_score = MIN_FLOAT
         best_move = None
         for move in moves:
             with self.rules.try_move(move):  # Will flip the move turn
@@ -35,8 +34,8 @@ class MinimaxAI:
         return best_move
 
     def get_hand_pieces(self):
-        return [p.pieces_on_hand for p in self.board.players]            
-  
+        return [p.pieces_on_hand for p in self.board.players]
+
     def get_piece_diff(self) -> int:
         counts = self.board.get_player_piece_counts()
         return counts[self.me] - counts[self.other]
@@ -51,18 +50,23 @@ class MinimaxAI:
             return self.get_piece_diff()
 
         # Figure out the optimization rules
+        moves = self.rules.get_current_player_moves()
         if is_maximizing:
             best_eval = MIN_FLOAT
-            eva_fnc = max
+            for move in moves:
+                with self.rules.try_move(move):
+                    score = self.minimax(depth + 1, alpha, beta, not is_maximizing)
+                best_eval = max(score, best_eval)
+                if best_eval > beta:
+                    break
+                alpha = max(alpha, best_eval)
         else:
             best_eval = MAX_FLOAT
-            eva_fnc = min
-        moves = self.rules.get_current_player_moves()
-        for move in moves:
-            with self.rules.try_move(move):
-                score = self.minimax(depth + 1, alpha, beta, False)
-            best_eval = eva_fnc(score, best_eval)
-            alpha = eva_fnc(alpha, score)
-            if beta <= alpha:
-                break
+            for move in moves:
+                with self.rules.try_move(move):
+                    score = self.minimax(depth + 1, alpha, beta, not is_maximizing)
+                best_eval = min(score, best_eval)
+                if best_eval < alpha:
+                    break
+                beta = min(beta, best_eval)
         return best_eval

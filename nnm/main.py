@@ -31,22 +31,25 @@ class NineMenMorris:
         ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=3)
         self.board.players[1].ai = ai
 
+    def is_ai_turn(self):
+        return self.current_player.ai is not None
+    
+    def play_ai(self) -> None:
+        ai: AI = self.current_player.ai
+        if ai is None:
+            raise RuntimeError("Player is not an AI")
+        moves = self.rules.get_current_player_moves()
+        choice = ai.select_move(moves)
+        print("AI choice:", choice)
+        self.rules.execute_move(choice)
+
     def event_handler(self, event: pygame.event.Event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.is_game_over():
                 print("Game is over")
                 return
-            pass_turn = False
             if not self.current_player.ai:
-                pass_turn = self._do_player_move()
-
-            if pass_turn and self.current_player.ai and not self.is_game_over():
-                # Instantaneously execute the AI turn.
-                ai: AI = self.current_player.ai
-                moves = self.rules.get_current_player_moves()
-                choice = ai.select_move(moves)
-                print("AI choice:", choice)
-                self.rules.execute_move(choice)
+                self._do_player_move()
 
     def _do_player_move(self) -> bool:
         """Returns whether the turn should be passed."""
