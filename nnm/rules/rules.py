@@ -57,7 +57,7 @@ class Rules:
             return []
 
         if phase is Phase.ONE:
-            yield from self.get_phase_one_moves()
+            yield from self.iter_phase_one_moves()
         elif phase is Phase.TWO:
             yield from self.iter_phase_two_three_moves(phase=Phase.TWO)
         else:
@@ -76,13 +76,13 @@ class Rules:
         return self.board.other_player
 
     def get_phase(self) -> Phase:
-        # Check if any players have pieces on hand
-        for player in self.board.players:
-            if player.pieces_on_hand > 0:
-                return Phase.ONE
+        # Check if the player has any pieceso n hand
+        player = self.current_player
+        if player.pieces_on_hand > 0:
+            return Phase.ONE
 
         # Check pieces on the board
-        player_piece_count = self.board.get_player_piece_counts()[self.current_player]
+        player_piece_count = self.board.get_player_piece_counts()[player]
         if player_piece_count < 3:
             return Phase.DONE
         elif player_piece_count == 3:
@@ -90,46 +90,33 @@ class Rules:
 
         return Phase.TWO
 
-    @contextmanager
-    def temp_place_piece(self, spot: SPOT):
-        self.board.place_piece(spot, remove_piece=False)
-        try:
-            yield
-        finally:
-            self.board.delete_spot(spot, force=True)
-            # self.current_player.pieces_on_hand += 1
-
-    @contextmanager
-    def temp_move_piece(self, from_spot: SPOT, to_spot: SPOT):
-        self.board.move_piece(from_spot, to_spot)
-        try:
-            yield
-        finally:
-            self.board.move_piece(to_spot, from_spot)
-
     def _iter_to_delete(self):
         for to_delete in self.board.get_owned_player_spots(player=self.other_player):
             can_delete = self.board.delete_spot(to_delete, test_only=True)
             if can_delete:
                 yield to_delete
 
-    def get_phase_one_moves(self) -> list[SPOT]:
+    def get_phase_one_moves(self) -> list[CandidatePlacement]:
         # Available positions to place in phase 1
         return list(self.iter_phase_one_moves())
     
     def iter_phase_one_moves(self):
         for spot, owner in self.board.pieces.items():
-            if owner is None:
-                # moves.append(CandidatePlacement(spot))
-                # Check if we made a mill
-                with self.temp_place_piece(spot):
-                    if self.board.has_three_in_a_line(
-                        must_contain=spot, player=self.current_player
-                    ):
-                        for to_delete in self._iter_to_delete():
-                           yield CandidatePlacement(spot, delete_spot=to_delete)
-                    else:
-                        yield CandidatePlacement(spot)
+            if owner is not None:
+                continue
+            # Check if we made a mill
+            success = self.board.place_piece(spot, remove_piece=False)
+            assert success
+            if self.board.has_three_in_a_line(
+                must_contain=spot, player=self.current_player
+            ):
+                for to_delete in self._iter_to_delete():
+                    yield CandidatePlacement(spot, delete_spot=to_delete)
+            else:
+                yield CandidatePlacement(spot)
+            success = self.board.delete_spot(spot, force=True)
+            assert success
+
 
     def iter_phase_two_three_moves(self, phase=Phase.TWO) -> Iterator[CandidateMove]:
         current_pices = self.board.get_owned_player_spots(self.current_player)
@@ -141,19 +128,23 @@ class Rules:
             else:
                 to_spots = self.board.spots
             for to_spot in to_spots:
-                if self.board.is_empty_spot(to_spot):
-                    with self.temp_move_piece(from_spot, to_spot):
-                        if self.board.has_three_in_a_line(
-                            must_contain=to_spot, player=self.current_player
-                        ):
-                            for to_delete in self._iter_to_delete():
-                                yield CandidateMove(
-                                    from_spot=from_spot,
-                                    to_spot=to_spot,
-                                    delete_spot=to_delete,
-                                )
-                        else:
-                            yield CandidateMove(from_spot=from_spot, to_spot=to_spot)
+                if not self.board.is_empty_spot(to_spot):
+                    continue
+                assert self.board.move_piece(from_spot, to_spot, flying=True)
+                moves = []
+                if self.board.has_three_in_a_line(
+                    must_contain=to_spot, player=self.current_player
+                ):
+                    for to_delete in self._iter_to_delete():
+                        moves.append(CandidateMove(
+                            from_spot=from_spot,
+                            to_spot=to_spot,
+                            delete_spot=to_delete,
+                        ))
+                else:
+                    moves.append(CandidateMove(from_spot=from_spot, to_spot=to_spot))
+                assert self.board.move_piece(to_spot, from_spot, flying=True)
+                yield from moves
 
     def get_phase_two_moves(self) -> list[CandidateMove]:
         return list(self.iter_phase_two_three_moves(phase=Phase.TWO))
@@ -178,6 +169,7 @@ class Rules:
         self.board.toggle_player(reverse=True)
         if isinstance(move, CandidatePlacement):
             self.board.delete_spot(move.spot, force=True)
+            assert self.board.pieces[move.spot] is None
             self.current_player.pieces_on_hand += 1
         elif isinstance(move, CandidateMove):
             self.board.move_piece(move.to_spot, move.from_spot, flying=True)
@@ -188,9 +180,19 @@ class Rules:
             self.board.place_piece(move.delete_spot, remove_piece=False, player=self.other_player)
 
     def is_game_over(self) -> bool:
-        if self.get_phase() is Phase.DONE:
+        phase = self.get_phase()
+        if phase is Phase.DONE:
             return True
+        if phase is Phase.ONE:
+            # Game can never be over in phase 1
+            return False
         for _ in self.iter_current_moves():
             # If there is any valid move, we aren't done.
             return False
         return True
+
+    @contextmanager
+    def try_move(self, move):
+        self.execute_move(move)
+        yield
+        self.undo_move(move)

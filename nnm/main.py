@@ -28,7 +28,7 @@ class NineMenMorris:
         self.rules = Rules(self.board)
 
         # ai = RandomAI()
-        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=2)
+        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=3)
         self.board.players[1].ai = ai
 
     def event_handler(self, event: pygame.event.Event):
@@ -43,7 +43,7 @@ class NineMenMorris:
             if pass_turn and self.current_player.ai and not self.is_game_over():
                 # Instantaneously execute the AI turn.
                 ai: AI = self.current_player.ai
-                moves = self.rules.iter_current_moves()
+                moves = self.rules.get_current_player_moves()
                 choice = ai.select_move(moves)
                 print("AI choice:", choice)
                 self.rules.execute_move(choice)
@@ -108,7 +108,6 @@ class NineMenMorris:
 
     def get_winner(self):
         counts = self.board.get_player_piece_counts()
-        counts.pop(None)
         return max(((k, v) for k, v in counts.items()), key=lambda tup: tup[1])[0]
 
     def draw(self) -> None:

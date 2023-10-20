@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TypeAlias, Any
 import itertools
+import functools
 
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import Counter
 
 from nnm.colors import RED, BLUE
@@ -98,9 +99,13 @@ class Player:
     number: int
     pieces_on_hand: int = 9
     ai: Any = None
+    _hash: int = field(init=False)
 
-    def __hash__(self):
-        return hash(self.name)
+    def __post_init__(self):
+        self._hash = hash(self.name)
+
+    def __hash__(self) -> int:
+        return self._hash
 
 
 class Board:
@@ -123,10 +128,10 @@ class Board:
             Player(name="Blue", color=BLUE, number=1),
         )
         self.pieces: dict[SPOT, Player | None] = {spot: None for spot in self.spots}
-        # self.pieces_by_player = {
-        #     self.players[0]: set(),
-        #     self.players[1]: set(),
-        # }
+        self.pieces_by_player = {
+            self.players[0]: set(),
+            self.players[1]: set(),
+        }
         self.ply = 0  # Half moves
 
         self.connected_spots = {
@@ -161,12 +166,15 @@ class Board:
         )[0]
 
     def delete_spot(self, spot: SPOT, test_only: bool = False, force: bool = False) -> bool:
-        if force:
-            self.pieces[spot] = None
-            return
         current = self.pieces[spot]
+        if force:
+            if current is not None:
+                self.pieces[spot] = None
+                self.pieces_by_player[current].remove(spot)
+            return True
         if current is None or current == self.player:
             # Not owned or own spot
+            print("Not deleting spot", spot, current, self.player)
             return False
         # Check if the spot is in a three in a line, not allowed to delete.
         if self.has_three_in_a_line(must_contain=spot, player=self.other_player):
@@ -177,15 +185,17 @@ class Board:
                 return False
         if not test_only:
             self.pieces[spot] = None
+            self.pieces_by_player[current].remove(spot)
         return True
     
     def place_piece(self, spot: SPOT, remove_piece: bool = True, player: Player = None) -> bool:
-        if player is None:
-            player = self.player
         current = self.pieces[spot]
         if current is not None:
             return False
+        if player is None:
+            player = self.player
         self.pieces[spot] = player
+        self.pieces_by_player[player].add(spot)
         if remove_piece:
             if player.pieces_on_hand == 0:
                 raise RuntimeError("Cannot place more pieces")
@@ -224,8 +234,9 @@ class Board:
         if player is None:
             player = self.player
         player_pieces = self.get_owned_player_spots(player)
+
         if len(player_pieces) < 3:
-            # Must have at least 3 pieces to have a line
+            # Not possible to make a mill
             return False
 
         for p1, p2, p3 in itertools.combinations(player_pieces, 3):
@@ -259,12 +270,16 @@ class Board:
                 raise RuntimeError("I don't own this piece?")
             self.pieces[from_pos] = None
             self.pieces[to_pos] = self.player
+            self.pieces_by_player[self.player].remove(from_pos)
+            self.pieces_by_player[self.player].add(to_pos)
             return True
         return False
 
     def get_player_piece_counts(self) -> Counter[Player, int]:
-        counts = Counter(self.pieces.values())
-        return counts
+        # counts = Counter(self.pieces.values())
+        # return counts
+        return {p: len(v) for p, v in self.pieces_by_player.items()}
 
-    def get_owned_player_spots(self, player: Player) -> list[SPOT]:
-        return [pos for pos, owner in self.pieces.items() if player == owner]
+    def get_owned_player_spots(self, player: Player) -> set[SPOT]:
+        return [pos for pos, owner in self.pieces.items() if player is owner]
+        # return self.pieces_by_player[player]
