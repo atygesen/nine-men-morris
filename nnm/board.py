@@ -106,13 +106,9 @@ class Player:
 
     def __hash__(self) -> int:
         return self._hash
-    
+
     def reset(self):
         self.pieces_on_hand = 9
-
-    def __eq__(self, other):
-        return self.name == other.name
-
 
 class Board:
     def __init__(self, width, height):
@@ -133,7 +129,10 @@ class Board:
             Player(name="Red", color=RED, number=0),
             Player(name="Blue", color=BLUE, number=1),
         )
-        self.pieces: dict[SPOT, Player | None] = {spot: None for spot in self.spots}
+        self._pieces: dict[SPOT, Player | None] = {spot: None for spot in self.spots}
+        # self._pieces: list[Player | None] = [
+        #     None for _ in range(BOARD_SIZE * BOARD_SIZE)
+        # ]
         self.pieces_by_player = {
             self.players[0]: set(),
             self.players[1]: set(),
@@ -141,7 +140,7 @@ class Board:
         self.ply = 0  # Half moves
 
         self.connected_spots = {
-            s1: [s2 for s2 in self.spots if s1 != s2 and self.is_connected(s1, s2)]
+            s1: {s2 for s2 in self.spots if s1 != s2 and self.is_connected(s1, s2)}
             for s1 in self.spots
         }
 
@@ -153,14 +152,14 @@ class Board:
 
     def reset(self):
         for spot in self.spots:
-            self.pieces[spot] = None
+            self.set_spot(spot, None)
         self.pieces_by_player = {
             self.players[0]: set(),
             self.players[1]: set(),
         }
         self.ply = 0
         self._turn_index = 0
-        
+
         for player in self.players:
             player.reset()
 
@@ -172,12 +171,18 @@ class Board:
             self.ply += 1
 
     @property
+    def pieces(self) -> dict[SPOT, Player | None]:
+        return {s: self.get_spot(s) for s in self.spots}
+
+    @property
     def turn(self) -> int:
         return self.ply // 2
 
     @property
     def player(self) -> Player:
-        return self.players[self._turn_index]
+        r = self.players[self._turn_index]
+        assert isinstance(r, Player)
+        return r
 
     @property
     def other_player(self) -> Player:
@@ -193,10 +198,10 @@ class Board:
     def delete_spot(
         self, spot: SPOT, test_only: bool = False, force: bool = False
     ) -> bool:
-        current = self.pieces[spot]
+        current = self.get_spot(spot)
         if force:
             if current is not None:
-                self.pieces[spot] = None
+                self.set_spot(spot, None)
                 self.pieces_by_player[current].remove(spot)
             return True
         if current is None or current == self.player:
@@ -215,22 +220,24 @@ class Board:
             ):
                 return False
         if not test_only:
-            self.pieces[spot] = None
+            self.set_spot(spot, None)
             self.pieces_by_player[current].remove(spot)
         return True
 
     def place_piece(
         self, spot: SPOT, remove_piece: bool = True, player: Player = None
     ) -> bool:
-        current = self.pieces[spot]
+        current = self.get_spot(spot)
         if current is not None:
             return False
         return self.place_piece_no_check(spot, remove_piece=remove_piece, player=player)
-    
-    def place_piece_no_check(self, spot: SPOT, remove_piece: bool = True, player: Player = None) -> bool:
+
+    def place_piece_no_check(
+        self, spot: SPOT, remove_piece: bool = True, player: Player = None
+    ) -> bool:
         if player is None:
             player = self.player
-        self.pieces[spot] = player
+        self.set_spot(spot, player)
         self.pieces_by_player[player].add(spot)
         if remove_piece:
             if player.pieces_on_hand == 0:
@@ -239,7 +246,7 @@ class Board:
         return True
 
     def is_available(self, spot: SPOT) -> bool:
-        return self.pieces[spot] is None
+        return self.get_spot(spot) is None
 
     def as_coord(self, pos: SPOT) -> Coord:
         offset = self._get_offset()
@@ -283,13 +290,13 @@ class Board:
         return False
 
     def is_own_piece(self, pos: SPOT) -> bool:
-        return self.pieces[pos] == self.player
+        return self.get_spot(pos) is self.player
 
     def is_other_player_piece(self, pos: SPOT) -> bool:
-        return self.pieces[pos] == self.other_player
+        return self.get_spot(pos) is self.other_player
 
     def is_empty_spot(self, pos: SPOT) -> bool:
-        return self.pieces[pos] is None
+        return self.get_spot(pos) is None
 
     def is_connected(self, p1: SPOT, p2: SPOT) -> bool:
         if p1 == p2:
@@ -303,10 +310,11 @@ class Board:
         ):
             if not self.is_own_piece(from_pos):
                 raise RuntimeError("I don't own this piece?")
-            self.pieces[from_pos] = None
-            self.pieces[to_pos] = self.player
-            self.pieces_by_player[self.player].remove(from_pos)
-            self.pieces_by_player[self.player].add(to_pos)
+            player = self.player
+            self.set_spot(from_pos, None)
+            self.set_spot(to_pos, player)
+            self.pieces_by_player[player].remove(from_pos)
+            self.pieces_by_player[player].add(to_pos)
             return True
         return False
 
@@ -322,9 +330,14 @@ class Board:
         p2 = self.players[1].pieces_on_hand
 
         lu = self._hash_lu
-
-        locs = r"/".join([lu[self.pieces[dot]] for dot in DOTS_PARSED])
+        locs = r"/".join([lu[val] for val in self._pieces.values()])
         return f"{t:d}_{p1:d}_{p2:d}_{locs}"
 
     def is_spot_owned_by(self, spot: SPOT, player: Player) -> bool:
-        return self.pieces[spot] == player
+        return self.get_spot(spot) is player
+
+    def get_spot(self, spot: SPOT) -> Player | None:
+        return self._pieces[spot]
+
+    def set_spot(self, spot: SPOT, value: Player | None) -> None:
+        self._pieces[spot] = value

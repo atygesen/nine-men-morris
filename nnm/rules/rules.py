@@ -105,15 +105,17 @@ class Rules:
 
     def get_phase_one_moves(self) -> list[CandidatePlacement]:
         # Available positions to place in phase 1
-        return list(self.iter_phase_one_moves())
+        moves = list(self.iter_phase_one_moves())
+        # First check moves which delete spots
+        moves.sort(key=lambda cand: cand.delete_spot is None)
+        return moves
 
     def iter_phase_one_moves(self):
         for spot, owner in self.board.pieces.items():
             if owner is not None:
                 continue
             # Check if we made a mill
-            success = self.board.place_piece(spot, remove_piece=False)
-            assert success
+            self.board.place_piece_no_check(spot, remove_piece=False)
             if self.board.has_three_in_a_line(
                 must_contain=spot, player=self.current_player
             ):
@@ -121,9 +123,8 @@ class Rules:
                     yield CandidatePlacement(spot, delete_spot=to_delete)
             else:
                 yield CandidatePlacement(spot)
-            success = self.board.delete_spot(spot, force=True)
-            assert success
-
+            self.board.delete_spot(spot, force=True)
+            
     def iter_phase_two_three_moves(self, phase=Phase.TWO) -> Iterator[CandidateMove]:
         current_pices = self.board.get_owned_player_spots(self.current_player)
 
@@ -136,7 +137,7 @@ class Rules:
             for to_spot in to_spots:
                 if not self.board.is_empty_spot(to_spot):
                     continue
-                assert self.board.move_piece(from_spot, to_spot, flying=True)
+                self.board.move_piece(from_spot, to_spot, flying=True)
                 moves = []
                 if self.board.has_three_in_a_line(
                     must_contain=to_spot, player=self.current_player
@@ -151,14 +152,18 @@ class Rules:
                         )
                 else:
                     moves.append(CandidateMove(from_spot=from_spot, to_spot=to_spot))
-                assert self.board.move_piece(to_spot, from_spot, flying=True)
+                self.board.move_piece(to_spot, from_spot, flying=True)
                 yield from moves
 
     def get_phase_two_moves(self) -> list[CandidateMove]:
-        return list(self.iter_phase_two_three_moves(phase=Phase.TWO))
+        moves = list(self.iter_phase_two_three_moves(phase=Phase.TWO))
+        moves.sort(key=lambda cand: cand.delete_spot is None)
+        return moves
 
     def get_phase_three_moves(self) -> list[CandidateMove]:
-        return list(self.iter_phase_two_three_moves(phase=Phase.THREE))
+        moves = list(self.iter_phase_two_three_moves(phase=Phase.THREE))
+        moves.sort(key=lambda cand: cand.delete_spot is None)
+        return moves
 
     def execute_move(self, move: CandidateMove | CandidatePlacement) -> None:
         if isinstance(move, CandidatePlacement):

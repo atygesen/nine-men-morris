@@ -44,6 +44,7 @@ class NineMenMorris:
         # print("State", self.board.get_board_state())
 
         # print("Evaluation", player.name, ai.evaluator.evaluate())
+        # print(ai.evaluator._get_blocked_pieces(player))
         self.rules.next_turn()
         # time.sleep(0.5)
 

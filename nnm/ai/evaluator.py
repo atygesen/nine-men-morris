@@ -85,11 +85,11 @@ class Evaluator:
         owned_pieces = self.board.pieces_by_player[player]
 
         other_player = self._get_other_player(player)
+        other_player_pieces = self.board.pieces_by_player[other_player]
 
         n_blocked = 0
-        pieces_cache = self.board.pieces
         for spot in owned_pieces:
             connected = self.board.connected_spots[spot]
-            if all(pieces_cache[spot] == other_player for s in connected):
+            if not connected - other_player_pieces:
                 n_blocked += 1
         return n_blocked
