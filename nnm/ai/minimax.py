@@ -2,6 +2,7 @@ from typing import Sequence
 
 from nnm.rules.rules import CandidateMove, CandidatePlacement, Rules
 from nnm.board import Player, Board
+from nnm.ai.evaluator import Evaluator
 
 MIN_FLOAT = float("-inf")
 MAX_FLOAT = float("inf")
@@ -13,8 +14,12 @@ class MinimaxAI:
     ) -> None:
         self.rules = rules
         self.max_depth = max_depth
-        self.me = me
-        self.other = other
+
+        self._cache = dict()
+        self.evaluator = Evaluator(self.board, me, other, rules)
+
+    def clear(self):
+        self._cache.clear()
 
     @property
     def board(self) -> Board:
@@ -36,18 +41,24 @@ class MinimaxAI:
     def get_hand_pieces(self):
         return [p.pieces_on_hand for p in self.board.players]
 
-    def get_piece_diff(self) -> int:
-        counts = self.board.get_player_piece_counts()
-        return counts[self.me] - counts[self.other]
-
     def minimax(self, depth: int, alpha: float, beta: float, is_maximizing: bool):
+        key = self.board.get_board_state()
+        if key in self._cache:
+            return self._cache[key]
+        
+        retval = None
+
         if self.rules.is_game_over():
             if is_maximizing:
-                return MIN_FLOAT
+                retval = MIN_FLOAT
             else:
-                return MAX_FLOAT
+                retval = MAX_FLOAT
         elif depth == self.max_depth:
-            return self.get_piece_diff()
+            retval = self.evaluator.evaluate()
+
+        if retval is not None:
+            self._cache[key] = retval
+            return retval
 
         # Figure out the optimization rules
         moves = self.rules.get_current_player_moves()
@@ -69,4 +80,5 @@ class MinimaxAI:
                 if best_eval < alpha:
                     break
                 beta = min(beta, best_eval)
+        self._cache[key] = best_eval
         return best_eval

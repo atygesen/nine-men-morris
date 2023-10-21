@@ -11,7 +11,6 @@ from collections import Counter
 from nnm.colors import RED, BLUE
 
 
-
 import math
 
 BOARD_SIZE = 8
@@ -51,7 +50,8 @@ def _parse_coord(dot: str) -> SPOT:
     return CONVERT[dot[0]], int(dot[1]) - 1
 
 
-DOTS_PARSED = tuple(_parse_coord(dot) for dot in DOTS)
+DOTS_PARSED = [_parse_coord(dot) for dot in DOTS]
+DOTS_PARSED.sort()
 
 with Path(__file__).with_name("connections.txt").open() as fd:
     CONNECTIONS = [line.strip().split(" ") for line in fd if line.strip()]
@@ -106,6 +106,12 @@ class Player:
 
     def __hash__(self) -> int:
         return self._hash
+    
+    def reset(self):
+        self.pieces_on_hand = 9
+
+    def __eq__(self, other):
+        return self.name == other.name
 
 
 class Board:
@@ -139,6 +145,25 @@ class Board:
             for s1 in self.spots
         }
 
+        self._hash_lu = {
+            None: "0",
+            self.players[0]: "1",
+            self.players[1]: "2",
+        }
+
+    def reset(self):
+        for spot in self.spots:
+            self.pieces[spot] = None
+        self.pieces_by_player = {
+            self.players[0]: set(),
+            self.players[1]: set(),
+        }
+        self.ply = 0
+        self._turn_index = 0
+        
+        for player in self.players:
+            player.reset()
+
     def toggle_player(self, reverse: bool = False) -> None:
         self._turn_index = (self._turn_index + 1) % 2
         if reverse:
@@ -165,7 +190,9 @@ class Board:
             key=lambda p: coord.get_distance(p[1]),
         )[0]
 
-    def delete_spot(self, spot: SPOT, test_only: bool = False, force: bool = False) -> bool:
+    def delete_spot(
+        self, spot: SPOT, test_only: bool = False, force: bool = False
+    ) -> bool:
         current = self.pieces[spot]
         if force:
             if current is not None:
@@ -180,18 +207,27 @@ class Board:
         if self.has_three_in_a_line(must_contain=spot, player=self.other_player):
             # Check if all of the other players pieces are in a mill
             # If all of that players pieces are in a mill, then we are allowed to delete it.
-            other_pieces = [pos for pos, owner in self.pieces.items() if self.other_player == owner and pos != spot]
-            if any(not self.has_three_in_a_line(must_contain=p, player=self.other_player) for p in other_pieces):
+            other_pieces = self.pieces_by_player[self.other_player]
+            if any(
+                not self.has_three_in_a_line(must_contain=p, player=self.other_player)
+                for p in other_pieces
+                if p != spot
+            ):
                 return False
         if not test_only:
             self.pieces[spot] = None
             self.pieces_by_player[current].remove(spot)
         return True
-    
-    def place_piece(self, spot: SPOT, remove_piece: bool = True, player: Player = None) -> bool:
+
+    def place_piece(
+        self, spot: SPOT, remove_piece: bool = True, player: Player = None
+    ) -> bool:
         current = self.pieces[spot]
         if current is not None:
             return False
+        return self.place_piece_no_check(spot, remove_piece=remove_piece, player=player)
+    
+    def place_piece_no_check(self, spot: SPOT, remove_piece: bool = True, player: Player = None) -> bool:
         if player is None:
             player = self.player
         self.pieces[spot] = player
@@ -229,8 +265,7 @@ class Board:
         must_contain: SPOT | None = None,
         player: Player | None = None,
     ) -> bool:
-        """Check for a three-in-a-line aka. a "mill".
-        """
+        """Check for a three-in-a-line aka. a "mill"."""
         if player is None:
             player = self.player
         player_pieces = self.get_owned_player_spots(player)
@@ -276,10 +311,20 @@ class Board:
         return False
 
     def get_player_piece_counts(self) -> Counter[Player, int]:
-        # counts = Counter(self.pieces.values())
-        # return counts
         return {p: len(v) for p, v in self.pieces_by_player.items()}
 
     def get_owned_player_spots(self, player: Player) -> set[SPOT]:
-        # return [pos for pos, owner in self.pieces.items() if player is owner]
         return self.pieces_by_player[player]
+
+    def get_board_state(self) -> str:
+        t = self._turn_index
+        p1 = self.players[0].pieces_on_hand
+        p2 = self.players[1].pieces_on_hand
+
+        lu = self._hash_lu
+
+        locs = r"/".join([lu[self.pieces[dot]] for dot in DOTS_PARSED])
+        return f"{t:d}_{p1:d}_{p2:d}_{locs}"
+
+    def is_spot_owned_by(self, spot: SPOT, player: Player) -> bool:
+        return self.pieces[spot] == player

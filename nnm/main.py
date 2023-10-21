@@ -8,8 +8,6 @@ from nnm.ai.ai import AI
 from pygame.draw import circle, line
 import pygame
 
-import time
-
 PIECE_SIZE = 15
 
 
@@ -35,13 +33,19 @@ class NineMenMorris:
         return self.current_player.ai is not None
     
     def play_ai(self) -> None:
-        ai: AI = self.current_player.ai
+        player = self.current_player
+        ai: AI = player.ai
         if ai is None:
             raise RuntimeError("Player is not an AI")
         moves = self.rules.get_current_player_moves()
         choice = ai.select_move(moves)
-        print("AI choice:", choice)
+        # print("AI choice:", choice)
         self.rules.execute_move(choice)
+        # print("State", self.board.get_board_state())
+
+        # print("Evaluation", player.name, ai.evaluator.evaluate())
+        self.rules.next_turn()
+        # time.sleep(0.5)
 
     def event_handler(self, event: pygame.event.Event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -93,6 +97,7 @@ class NineMenMorris:
                         pass_turn = True
         if pass_turn:
             self.board.toggle_player()
+            self.rules.next_turn()
         return pass_turn
 
     @property
@@ -148,7 +153,14 @@ class NineMenMorris:
                 )
 
         if self.is_game_over():
-            winner = self.get_winner()
-            title = my_font.render(f"GAME OVER, {winner.name} WON", True, RED)
+            if self.rules.get_phase() is Phase.DRAW:
+                title = my_font.render(f"GAME OVER, DRAW", True, RED)
+            else:
+                winner = self.get_winner()
+                title = my_font.render(f"GAME OVER, {winner.name} WON", True, RED)
             text_rect = title.get_rect(center=(self.w / 2, self.h / 2))
             self.screen.blit(title, text_rect)
+
+    def reset(self):
+        self.board.reset()
+        self.rules.reset()
