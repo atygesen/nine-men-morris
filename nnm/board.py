@@ -54,9 +54,9 @@ DOTS_PARSED = [_parse_coord(dot) for dot in DOTS]
 DOTS_PARSED.sort()
 
 with Path(__file__).with_name("connections.txt").open() as fd:
-    CONNECTIONS = [line.strip().split(" ") for line in fd if line.strip()]
-    CONNECTIONS = [tuple(sorted(map(_parse_coord, c))) for c in CONNECTIONS]
-
+    CONNECTIONS_RAW = [line.strip().split(" ") for line in fd if line.strip()]
+    CONNECTIONS = [set(map(_parse_coord, c)) for c in CONNECTIONS_RAW]
+    del CONNECTIONS_RAW
 
 def _is_a_connected_line(p1: SPOT, p2: SPOT, p3: SPOT) -> bool:
     # Check all of either i or j coordinates are equal (must be on a line)
@@ -66,9 +66,9 @@ def _is_a_connected_line(p1: SPOT, p2: SPOT, p3: SPOT) -> bool:
     else:
         return False
 
-    # Check they are pairwise connected
+    # # Check they are pairwise connected
     for a, b, c in itertools.permutations([p1, p2, p3], 3):
-        if (a, b) in CONNECTIONS and (b, c) in CONNECTIONS:
+        if {a, b} in CONNECTIONS and {b, c} in CONNECTIONS:
             return True
     return False
 
@@ -78,6 +78,7 @@ ALL_CONNECTED_LINES = [
     for p1, p2, p3 in itertools.combinations(DOTS_PARSED, 3)
     if _is_a_connected_line(p1, p2, p3)
 ]
+
 
 
 @dataclass(slots=True, frozen=True)
@@ -113,15 +114,13 @@ class Player:
 class Board:
     def __init__(self, width, height):
         self.spots = DOTS_PARSED
-        self.connections = CONNECTIONS
-        assert len(self.connections) == len(set(self.connections))  # Sanity check
 
         self.w = width
         self.h = height
 
         self.spot_coordinates = [self.as_coord(pos) for pos in self.spots]
         self.connections_coordinates = [
-            (self.as_coord(p0), self.as_coord(p1)) for p0, p1 in self.connections
+            (self.as_coord(p0), self.as_coord(p1)) for p0, p1 in CONNECTIONS
         ]
 
         self._turn_index = 0
@@ -144,11 +143,14 @@ class Board:
             for s1 in self.spots
         }
 
+        self.central_spots = {s1 for s1 in self.spots if len(self.connected_spots[s1]) == 4}
+
         self._hash_lu = {
             None: "0",
             self.players[0]: "1",
             self.players[1]: "2",
         }
+        self._state_cache = None
 
     def reset(self):
         for spot in self.spots:
@@ -198,6 +200,7 @@ class Board:
     def delete_spot(
         self, spot: SPOT, test_only: bool = False, force: bool = False
     ) -> bool:
+        self._state_cache = None
         current = self.get_spot(spot)
         if force:
             if current is not None:
@@ -235,6 +238,7 @@ class Board:
     def place_piece_no_check(
         self, spot: SPOT, remove_piece: bool = True, player: Player = None
     ) -> bool:
+        self._state_cache = None
         if player is None:
             player = self.player
         self.set_spot(spot, player)
@@ -302,7 +306,7 @@ class Board:
         if p1 == p2:
             # We don't consider self as connected
             return False
-        return (p1, p2) in CONNECTIONS or (p2, p1) in CONNECTIONS
+        return {p1, p2} in CONNECTIONS
 
     def move_piece(self, from_pos: SPOT, to_pos: SPOT, flying: bool = False) -> bool:
         if self.is_empty_spot(to_pos) and (
@@ -310,6 +314,7 @@ class Board:
         ):
             if not self.is_own_piece(from_pos):
                 raise RuntimeError("I don't own this piece?")
+            self._state_cache = None
             player = self.player
             self.set_spot(from_pos, None)
             self.set_spot(to_pos, player)
@@ -325,13 +330,17 @@ class Board:
         return self.pieces_by_player[player]
 
     def get_board_state(self) -> str:
+        if self._state_cache:
+            return self._state_cache
         t = self._turn_index
         p1 = self.players[0].pieces_on_hand
         p2 = self.players[1].pieces_on_hand
 
         lu = self._hash_lu
         locs = r"/".join([lu[val] for val in self._pieces.values()])
-        return f"{t:d}_{p1:d}_{p2:d}_{locs}"
+        state = f"{t:d}_{p1:d}_{p2:d}_{locs}"
+        self._state_cache = state
+        return state
 
     def is_spot_owned_by(self, spot: SPOT, player: Player) -> bool:
         return self.get_spot(spot) is player

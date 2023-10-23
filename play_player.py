@@ -26,7 +26,9 @@ def play():
     t0 = time.perf_counter()
     while running:
         if game.is_ai_turn() and not game.is_game_over():
+            ai_player = game.current_player
             game.play_ai()
+            # print(ai_player.ai.evaluator._get_closed_morris(ai_player))
         else:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

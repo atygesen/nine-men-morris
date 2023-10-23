@@ -26,8 +26,9 @@ class NineMenMorris:
         self.rules = Rules(self.board)
 
         # ai = RandomAI()
-        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=3)
+        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=5)
         self.board.players[1].ai = ai
+        # ai.evaluator.load_brain()
 
     def is_ai_turn(self):
         return self.current_player.ai is not None

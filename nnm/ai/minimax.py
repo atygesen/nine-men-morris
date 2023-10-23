@@ -32,7 +32,8 @@ class MinimaxAI:
         best_move = None
         for move in moves:
             with self.rules.try_move(move):  # Will flip the move turn
-                score = self.minimax(0, MIN_FLOAT, MAX_FLOAT, False)
+                score = self.minimax(0, MIN_FLOAT, MAX_FLOAT, True)
+            # print(score, move)
             if best_move is None or score > best_score:
                 best_score = score
                 best_move = move
@@ -50,9 +51,9 @@ class MinimaxAI:
 
         if self.rules.is_game_over():
             if is_maximizing:
-                retval = MIN_FLOAT
-            else:
                 retval = MAX_FLOAT
+            else:
+                retval = MIN_FLOAT
         elif depth == self.max_depth:
             retval = self.evaluator.evaluate()
 

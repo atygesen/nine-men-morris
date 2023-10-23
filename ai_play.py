@@ -20,7 +20,7 @@ ai = MinimaxAI(game.board.players[0], game.board.players[1], game.rules, max_dep
 player.ai = ai
 eva = ai.evaluator
 
-ga = GA(n_pops=5)
+ga = GA(n_pops=6)
 
 storage = Path("brain.json")
 
@@ -36,12 +36,23 @@ for r in brains["result"]:
     scores[r] += 1
 
 running = True
+other_player = game.board.players[1]
+
 
 def get_score(result, turns):
     global brains
     if result == "draw":
         return 0
-    s = math.exp(-(turns/100)**2)
+    # s = math.exp(-(turns/100)**2)
+    # if result == "loss":
+    #     s *= -1
+
+    board = game.board
+    my_p = len(board.pieces_by_player[player])
+    other_p = len(board.pieces_by_player[other_player])
+
+    s = abs(my_p - other_p)
+
     if result == "loss":
         s *= -1
     return s
@@ -79,8 +90,6 @@ def play():
             brains["score"].append(score)
             brains["generation"].append(ga.generation)
             print(f"Result: {result}. Current score: {scores}. Game over in {dt:.2f} s")
-            with open(storage, "w") as fd:
-                json.dump(brains, fd, indent=4)
             return
     
         game.play_ai()
@@ -91,23 +100,28 @@ best_score = float("-inf")
 for i, brain in enumerate(brains["brains"]):
     score = brains["score"][i]
     if score > best_score:
-        print("Setting brain with score", brains["result"][i], brains["turns"][i], score)
+        # print("Setting brain with score", brains["result"][i], brains["turns"][i], score)
         best_score = score
         eva.set_brain(brain)
 
 t0 = time.perf_counter()
 idx = 0
 pops = []
-pop_scores = []
+pop_scores = ga.scores
 is_initial = True
 best_brain = None
+best_score = float("-inf")
 while running:
     if idx == 0:
+        with open(storage, "w") as fd:
+            json.dump(brains, fd, indent=4)
+        if best_score > 0:
+            other_player.ai.evaluator.load_brain()
         if pops:
             # Get best pop
             print("pop won {:.2f}%".format(sum(1 for s in pop_scores if s > 0)/len(pop_scores)*100))
             best_i = np.argmax(pop_scores)
-            if max(pop_scores) > best_score:
+            if max(pop_scores) >= 0:
                 best_score = max(pop_scores)
                 best_brain = pops[best_i]
             eva.set_brain(best_brain)

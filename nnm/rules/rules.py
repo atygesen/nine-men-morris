@@ -30,6 +30,7 @@ class CandidateMove:
     to_spot: SPOT
     delete_spot: SPOT | None = None
 
+P1_MOVE_CACHE = {}
 
 class Rules:
     def __init__(self, board: Board):
@@ -104,10 +105,14 @@ class Rules:
                 yield to_delete
 
     def get_phase_one_moves(self) -> list[CandidatePlacement]:
+        state = self.board.get_board_state()
+        if state in P1_MOVE_CACHE:
+            return P1_MOVE_CACHE[state]
         # Available positions to place in phase 1
         moves = list(self.iter_phase_one_moves())
         # First check moves which delete spots
         moves.sort(key=lambda cand: cand.delete_spot is None)
+        P1_MOVE_CACHE[state] = moves
         return moves
 
     def iter_phase_one_moves(self):
@@ -169,8 +174,8 @@ class Rules:
         if isinstance(move, CandidatePlacement):
             self.board.place_piece_no_check(move.spot)
         elif isinstance(move, CandidateMove):
-            flying = self.get_phase() is Phase.THREE
-            self.board.move_piece(move.from_spot, move.to_spot, flying=flying)
+            # flying = self.get_phase() is Phase.THREE
+            self.board.move_piece(move.from_spot, move.to_spot, flying=True)
         else:
             raise TypeError(f"Unknown move: {move!r}")
         if move.delete_spot:
