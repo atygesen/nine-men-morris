@@ -31,16 +31,16 @@ class MinimaxAI:
         best_score = MIN_FLOAT
         best_move = None
         for move in moves:
-            with self.rules.try_move(move):  # Will flip the move turn
-                score = self.minimax(0, MIN_FLOAT, MAX_FLOAT, True)
-            # print(score, move)
+            self.rules.execute_move(move)
+            score = self.minimax(0, MIN_FLOAT, MAX_FLOAT, False)
+            self.rules.undo_move(move)
             if best_move is None or score > best_score:
                 best_score = score
                 best_move = move
         return best_move
 
     def get_hand_pieces(self):
-        return [p.pieces_on_hand for p in self.board.players]
+        return self.board.get_piece_counts()
 
     def minimax(self, depth: int, alpha: float, beta: float, is_maximizing: bool):
         key = self.board.get_board_state()
@@ -51,11 +51,13 @@ class MinimaxAI:
 
         if self.rules.is_game_over():
             if is_maximizing:
-                retval = MAX_FLOAT
-            else:
+                # TODO:  This value seems to be the wrong way around... but it works??!
                 retval = MIN_FLOAT
+            else:
+                retval = MAX_FLOAT
         elif depth == self.max_depth:
             retval = self.evaluator.evaluate()
+            # print("Evaluation:", retval)
 
         if retval is not None:
             self._cache[key] = retval
@@ -66,8 +68,9 @@ class MinimaxAI:
         if is_maximizing:
             best_eval = MIN_FLOAT
             for move in moves:
-                with self.rules.try_move(move):
-                    score = self.minimax(depth + 1, alpha, beta, not is_maximizing)
+                self.rules.execute_move(move)
+                score = self.minimax(depth + 1, alpha, beta, False)
+                self.rules.undo_move(move)
                 best_eval = max(score, best_eval)
                 if best_eval > beta:
                     break
@@ -75,8 +78,9 @@ class MinimaxAI:
         else:
             best_eval = MAX_FLOAT
             for move in moves:
-                with self.rules.try_move(move):
-                    score = self.minimax(depth + 1, alpha, beta, not is_maximizing)
+                self.rules.execute_move(move)
+                score = self.minimax(depth + 1, alpha, beta, True)
+                self.rules.undo_move(move)
                 best_eval = min(score, best_eval)
                 if best_eval < alpha:
                     break

@@ -2,3 +2,7 @@ __pycache__
 *.pyc
 *.prof
 .ipynb_checkpoints/
+
+*.so
+*.egg-info/
+build/

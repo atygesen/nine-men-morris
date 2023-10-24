@@ -1,5 +1,6 @@
 from nnm.colors import WHITE, BLACK, GREEN, RED
-from nnm.board import Board
+from nnm.board import Board, Player
+from nnm.board_screen import BoardScreen
 from nnm.rules.rules import Rules, Phase
 from nnm.ai.rand_ai import RandomAI
 from nnm.ai.minimax import MinimaxAI
@@ -19,14 +20,15 @@ class NineMenMorris:
         self.w = w
         self.h = h
 
-        self.board = Board(self.w, self.h)
+        self.board = Board()
+        self.board_screen = BoardScreen(w, h, self.board)
         self.delete_spot_state = False
         self.selected_pos = None
 
         self.rules = Rules(self.board)
 
-        # ai = RandomAI()
-        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=5)
+        ai = RandomAI()
+        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=3)
         self.board.players[1].ai = ai
         # ai.evaluator.load_brain()
 
@@ -62,44 +64,53 @@ class NineMenMorris:
         x, y = pygame.mouse.get_pos()
 
         phase = self.get_phase()
-        spot = self.board.get_closest_spot(x, y)
+        spot = self.board_screen.get_closest_index(x, y)
         pass_turn = False
+
+        print("Phase", phase)
 
         # Player logic
         if self.delete_spot_state:
-            success = self.board.delete_spot(spot)
-            if success:
+            try:
+                self.board.remove_piece(spot)
+            except ValueError:
+                # Invalid
+                pass
+            else:
                 self.delete_spot_state = False
                 pass_turn = True
         elif phase is Phase.ONE:
             if self.board.is_available(spot):
-                success = self.board.place_piece(spot)
-                if success:
-                    # Was able to place a piece
-                    if self.board.has_three_in_a_line(must_contain=spot):
-                        self.delete_spot_state = True
-                    else:
-                        pass_turn = True
+                is_mill = self.board.place_piece(spot, self.current_player, check_mill=True)
+                if is_mill:
+                    self.delete_spot_state = True
+                else:
+                    pass_turn = True
         else:
             # Movement phase
             if not self.selected_pos and self.board.is_own_piece(spot):
                 self.selected_pos = spot
+                print("Selected", spot)
             elif self.selected_pos == spot:
                 self.selected_pos = None
             elif self.selected_pos:
-                is_flying = phase is Phase.THREE
-                success = self.board.move_piece(
-                    self.selected_pos, spot, flying=is_flying
-                )
-                if success:
+                try:                
+                    self.board.move_piece(
+                        self.selected_pos, spot, player=self.current_player
+                    )
+                except ValueError:
+                    # Invalid move
+                    pass
+                else:
                     self.selected_pos = None
-                    if self.board.has_three_in_a_line(must_contain=spot):
+                    if self.board.is_in_mill(spot, self.current_player):
                         self.delete_spot_state = True
                     else:
                         pass_turn = True
         if pass_turn:
             self.board.toggle_player()
             self.rules.next_turn()
+        print("Closest index", spot, self.selected_pos)
         return pass_turn
 
     @property
@@ -108,7 +119,7 @@ class NineMenMorris:
 
     @property
     def current_player(self):
-        return self.board.player
+        return self.board.current_player
 
     def get_phase(self) -> Phase:
         return self.rules.get_phase()
@@ -116,43 +127,43 @@ class NineMenMorris:
     def is_game_over(self) -> bool:
         return self.rules.is_game_over()
 
-    def get_winner(self):
-        counts = self.board.get_player_piece_counts()
-        return max(((k, v) for k, v in counts.items()), key=lambda tup: tup[1])[0]
+    def get_winner(self) -> Player:
+        players = self.board.players
+        return max(players, key=lambda p: self.board.get_player_piece_counts(p))
+
 
     def draw(self) -> None:
         self.screen.fill(self.background)
 
         my_font = pygame.font.SysFont("arial", 20)
         title = my_font.render(
-            f"Ply: {self.board.ply}, Turn: {self.turn}, Phase: {self.get_phase()}, player: {self.board.player.name}, deletion: {self.delete_spot_state}",
+            f"Ply: {self.board.ply}, Turn: {self.turn}, Phase: {self.get_phase()}, player: {self.board.current_player.name}, deletion: {self.delete_spot_state}",
             True,
             BLACK,
         )
         text_rect = title.get_rect(center=(self.w / 2, 15))
         self.screen.blit(title, text_rect)
 
-        counts = [p.pieces_on_hand for p in self.board.players]
+        counts = self.board.get_piece_counts()
         cnt = my_font.render(f"Counts: {counts}", True, BLACK)
         text_rect = title.get_rect(center=(self.w / 2, 35))
         self.screen.blit(cnt, text_rect)
 
-        for coord in self.board.spot_coordinates:
+        for coord in self.board_screen.spot_coordinates:
             circle(self.screen, BLACK, coord.as_tuple(), 6)
 
-        for pos1, pos2 in self.board.connections_coordinates:
+        for pos1, pos2 in self.board_screen.connections_coordinates:
             line(self.screen, BLACK, pos1.as_tuple(), pos2.as_tuple())
 
-        for pos, player in self.board.pieces.items():
-            if player is not None:
-                # Check if it's a "selected" piece
-                color = player.color if pos != self.selected_pos else GREEN
-                circle(
-                    self.screen,
-                    color,
-                    self.board.as_coord(pos).as_tuple(),
-                    PIECE_SIZE,
-                )
+        for coord, player in self.board_screen.get_piece_coords():
+            # Check if it's a "selected" piece
+            color = player.color if coord.index != self.selected_pos else GREEN
+            circle(
+                self.screen,
+                color,
+                coord.as_tuple(),
+                PIECE_SIZE,
+            )
 
         if self.is_game_over():
             if self.rules.get_phase() is Phase.DRAW:

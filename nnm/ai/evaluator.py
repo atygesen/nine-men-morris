@@ -1,4 +1,5 @@
-from nnm.board import Board, Player, ALL_CONNECTED_LINES, DOTS_PARSED
+from nnm.board import Board, Player
+from nnm.consts import ALL_CONNECTED_LINES, DOTS_PARSED
 from nnm.rules.rules import Rules, Phase
 import random
 import json
@@ -91,21 +92,21 @@ class Evaluator:
         score = 0
         score += self._get_piece_diff() * c["piece_diff"]
 
-        if c1 := c["central_pieces"]:
-            score += -c1 * self._get_central_pieces(self.me)
-        # More blocked is bad.
-        if c1 := c["my_blocked"]:
-            score += c1 * self._get_blocked_pieces(self.me)
-        if c1 := c["other_blocked"]:
-            score += c1 * self._get_blocked_pieces(self.other)
-        if c1 := c["closed_diff"]:
-            score += c1 * (
-                self._get_closed_morris(self.me) - self._get_closed_morris(self.other)
-            )
-        if c1 := c["two_piece_me"]:
-            score += c1 * self._get_two_piece_config(self.me)
-        if c1 := c["two_piece_other"]:
-            score += c1 * self._get_two_piece_config(self.other)
+        # if c1 := c["central_pieces"]:
+        #     score += -c1 * self._get_central_pieces(self.me)
+        # # More blocked is bad.
+        # if c1 := c["my_blocked"]:
+        #     score += c1 * self._get_blocked_pieces(self.me)
+        # if c1 := c["other_blocked"]:
+        #     score += c1 * self._get_blocked_pieces(self.other)
+        # if c1 := c["closed_diff"]:
+        #     score += c1 * (
+        #         self._get_closed_morris(self.me) - self._get_closed_morris(self.other)
+        #     )
+        # if c1 := c["two_piece_me"]:
+        #     score += c1 * self._get_two_piece_config(self.me)
+        # if c1 := c["two_piece_other"]:
+        #     score += c1 * self._get_two_piece_config(self.other)
         return score
 
     def _get_central_pieces(self, player: Player) -> int:
@@ -113,16 +114,14 @@ class Evaluator:
         return len(owned - self.board.central_spots)
 
     def _get_piece_diff(self) -> int:
-        counts = self.board.get_player_piece_counts()
-        return counts[self.me] - counts[self.other]
+        # counts = self.board.get_player_piece_counts()
+        fnc = self.board.get_player_piece_counts
+        return fnc(self.me) - fnc(self.other)
 
     def _get_other_player(self, player: Player):
         return self.me if player is self.other else self.other
 
     def _get_blocked_pieces(self, player: Player):
-        # key = (self._board_state, player)
-        # if key in BLOCKED_CACHE:
-        #     return BLOCKED_CACHE[key]
         owned_pieces = self.board.pieces_by_player[player]
 
         other_player = self._get_other_player(player)
