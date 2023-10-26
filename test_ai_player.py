@@ -9,6 +9,7 @@ import time
 import numpy as np
 from pprint import pprint
 import math
+import cProfile
 
 pygame.init()
 screen = pygame.display.set_mode((860, 860))
@@ -63,7 +64,7 @@ def play():
     game.reset()
     ai.clear()
 
-    print(eva.get_brain())
+    # print(eva.get_brain())
 
     t0 = time.perf_counter()
     while running:
@@ -71,6 +72,7 @@ def play():
             if event.type == pygame.QUIT:
                 running = False
         if game.is_game_over():
+            running = False
             dt = time.perf_counter() - t0
             t0 = time.perf_counter()
             state = game.get_phase()
@@ -104,36 +106,9 @@ for i, brain in enumerate(brains["brains"]):
         best_score = score
         eva.set_brain(brain)
 
-t0 = time.perf_counter()
-idx = 0
-pops = []
-pop_scores = ga.scores
-is_initial = True
-best_brain = None
-best_score = float("-inf")
-while running:
-    if idx == 0:
-        with open(storage, "w") as fd:
-            json.dump(brains, fd, indent=4)
-        if best_score > 0:
-            other_player.ai.evaluator.load_brain()
-        if pops:
-            # Get best pop
-            print("pop won {:.2f}%".format(sum(1 for s in pop_scores if s > 0)/len(pop_scores)*100))
-            best_i = np.argmax(pop_scores)
-            if max(pop_scores) >= 0:
-                best_score = max(pop_scores)
-                best_brain = pops[best_i]
-            eva.set_brain(best_brain)
-            print("Scores:", pop_scores)
-        b = eva.get_brain()
-        pops = ga.generate_pops(b)
-        pop_scores.clear()
-        print(f"Generated new pop of length {len(pops)}")
-    brain = pops[idx]
-    eva.set_brain(brain)
+with cProfile.Profile() as pr:
     play()
-    pop_scores.append(brains["score"][-1])
-    idx = (idx + 1) % ga.n_pops
+    pr.dump_stats("ai_profile.prof")
+
 
 pygame.quit()

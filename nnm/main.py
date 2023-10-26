@@ -28,13 +28,15 @@ class NineMenMorris:
         self.rules = Rules(self.board)
 
         ai = RandomAI()
-        ai = MinimaxAI(self.board.players[1], self.board.players[0], self.rules, max_depth=3)
+        ai = MinimaxAI(
+            self.board.players[1], self.board.players[0], self.rules, max_depth=3
+        )
         self.board.players[1].ai = ai
         # ai.evaluator.load_brain()
 
     def is_ai_turn(self):
         return self.current_player.ai is not None
-    
+
     def play_ai(self) -> None:
         player = self.current_player
         ai: AI = player.ai
@@ -67,40 +69,46 @@ class NineMenMorris:
         spot = self.board_screen.get_closest_index(x, y)
         pass_turn = False
 
-        print("Phase", phase)
+        # print("Phase", phase)
 
         # Player logic
         if self.delete_spot_state:
-            try:
-                self.board.remove_piece(spot)
-            except ValueError:
-                # Invalid
-                pass
-            else:
-                self.delete_spot_state = False
-                pass_turn = True
+            if self.board.can_delete(spot):
+                try:
+                    self.board.remove_piece(spot)
+                except ValueError:
+                    # Invalid
+                    pass
+                else:
+                    self.delete_spot_state = False
+                    pass_turn = True
         elif phase is Phase.ONE:
             if self.board.is_available(spot):
-                is_mill = self.board.place_piece(spot, self.current_player, check_mill=True)
+                is_mill = self.board.place_piece(
+                    spot, self.current_player, check_mill=True
+                )
                 if is_mill:
                     self.delete_spot_state = True
                 else:
                     pass_turn = True
         else:
             # Movement phase
-            if not self.selected_pos and self.board.is_own_piece(spot):
+            if self.selected_pos is None and self.board.is_own_piece(spot):
                 self.selected_pos = spot
-                print("Selected", spot)
+                # print("Selected", spot)
             elif self.selected_pos == spot:
                 self.selected_pos = None
-            elif self.selected_pos:
-                try:                
+            elif self.selected_pos is not None:
+                try:
                     self.board.move_piece(
-                        self.selected_pos, spot, player=self.current_player
+                        self.selected_pos,
+                        spot,
+                        player=self.current_player,
+                        flying=phase is Phase.THREE,
                     )
-                except ValueError:
+                except ValueError as e:
                     # Invalid move
-                    pass
+                    print("Move error", e)
                 else:
                     self.selected_pos = None
                     if self.board.is_in_mill(spot, self.current_player):
@@ -110,7 +118,7 @@ class NineMenMorris:
         if pass_turn:
             self.board.toggle_player()
             self.rules.next_turn()
-        print("Closest index", spot, self.selected_pos)
+        # print("Closest index", spot, self.selected_pos)
         return pass_turn
 
     @property
@@ -130,7 +138,6 @@ class NineMenMorris:
     def get_winner(self) -> Player:
         players = self.board.players
         return max(players, key=lambda p: self.board.get_player_piece_counts(p))
-
 
     def draw(self) -> None:
         self.screen.fill(self.background)

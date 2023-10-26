@@ -1,11 +1,13 @@
 from glob import glob
 from setuptools import setup, find_packages
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+import pybind11
 
 ext_modules = [
     Pybind11Extension(
         "nnm_board",
-        ["cpp_src/board.cpp"],  # Sort source files for reproducibility
+        glob("cxx/src/*.cpp"),  # Sort source files for reproducibility
+        include_dirs=[pybind11.get_include(), "cxx/include/"],
     ),
 ]
 

@@ -56,9 +56,11 @@ class Board:
     def get_piece_state(self) -> list[int]:
         return self._board.get_board()
 
-    def place_piece(self, index: int, player: Player, check_mill: bool = True) -> None | bool:
-        self._board.place_piece(index, player.number)
-        # player.pieces_on_hand -= 1
+    def place_piece(self, index: int, player: Player | None = None, check_mill: bool = True) -> None | bool:
+        if player is None:
+            self._board.place_piece(index)
+        else:
+            self._board.place_piece(index, player.number)
         if check_mill:
             return self._board.check_mill(index, player.number)
         return None
@@ -67,29 +69,33 @@ class Board:
         """Place a piece, but do not take a piece from the hand."""
         self._board.temp_place_piece(index, player.number)
 
-    def move_piece(self, from_pos: int, to_pos: int, player: Player | None = None) -> None:
+    def move_piece(self, from_pos: int, to_pos: int, player: Player | None = None, flying: bool = False) -> None:
+        if flying:
+            fnc = self._board.move_piece_flying
+        else:
+            fnc = self._board.move_piece
         if player is None:
-            player = self.current_player
-        self._board.move_piece(from_pos, to_pos, player.number)
+            fnc(from_pos, to_pos)
+        else:
+            fnc(from_pos, to_pos, player.number)
 
     def remove_piece(self, pos: int, player: Player | None = None) -> None:
         """Remove a piece from the board"""
         if player is None:
-            player = self.current_player
-        self._board.remove_piece(pos, player.number)
+            self._board.remove_piece(pos)
+        else:
+            self._board.remove_piece(pos, player.number)
 
     def can_delete(self, pos: int, player: Player | None = None):
         if player is None:
             player = self.current_player
-        self._board.can_delete(pos, player.number)
+        return self._board.can_delete(pos, player.number)
         
-
     def force_remove_piece(self, pos: int) -> None:
         self._board.remove_piece(pos, -1)  # Checks it wasn't already empty
 
-    def give_piece(self, player: Player) -> None:
-        self._board.give_piece(player.number)
-        # player.pieces_on_hand += 1
+    def give_piece(self) -> None:
+        self._board.give_piece()
 
     def is_in_mill(self, pos: int, player: Player) -> bool:
         return self._board.check_mill(pos, player.number)
@@ -97,11 +103,11 @@ class Board:
     def is_available(self, pos: int) -> bool:
         return self._board.is_available(pos)
 
-    def toggle_player(self, reverse: bool = False) -> None:
-        if reverse:
-            self._board.reverse_turn()
-        else:
-            self._board.toggle_turn()
+    def toggle_player(self) -> None:
+        self._board.toggle_turn()
+    
+    def reverse_turn(self):
+        self._board.reverse_turn()
 
     @property
     def _turn_index(self):

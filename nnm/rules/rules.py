@@ -83,24 +83,17 @@ class Rules:
         return self.board.other_player
 
     def get_phase(self) -> Phase:
-        # Check if the player has any pieces on hand
-        player = self.current_player
-        if self.board.get_piece_counts()[player.number] > 0:
+        p = self._move_finder.get_phase()
+        if p == 1:
+            # No draws in Phase 1, short circuit
             return Phase.ONE
-
-        # Cannot be a draw in phase 1
+        # Check for draws
         high_state = self._state_counter.most_common(1)
         if high_state and high_state[0][1] >= 3:
             return Phase.DRAW
+        return Phase(p)
 
-        # Check pieces on the board
-        player_piece_count = self.board.get_player_piece_counts(player)
-        if player_piece_count < 3:
-            return Phase.DONE
-        elif player_piece_count == 3:
-            return Phase.THREE
 
-        return Phase.TWO
 
     def _iter_to_delete(self):
         for to_delete in self.board.get_owned_player_spots(player=self.other_player):
@@ -142,10 +135,10 @@ class Rules:
 
     def execute_move(self, move: CandidateMove | CandidatePlacement) -> None:
         if isinstance(move, CandidatePlacement):
-            self.board.place_piece(move.spot, self.current_player, check_mill=False)
+            self.board.place_piece(move.spot, check_mill=False)
         elif isinstance(move, CandidateMove):
-            # flying = self.get_phase() is Phase.THREE
-            self.board.move_piece(move.from_spot, move.to_spot, self.current_player)
+            flying = self.get_phase() is Phase.THREE
+            self.board.move_piece(move.from_spot, move.to_spot, flying=flying)
         else:
             raise TypeError(f"Unknown move: {move!r}")
         if move.delete_spot:
@@ -154,17 +147,18 @@ class Rules:
         self.board.toggle_player()
 
     def undo_move(self, move: CandidateMove | CandidatePlacement) -> None:
-        self.board.toggle_player(reverse=True)
+        board = self.board
+        board.reverse_turn()
         if isinstance(move, CandidatePlacement):
-            self.board.force_remove_piece(move.spot)
-            self.board.give_piece(self.current_player)
+            board.force_remove_piece(move.spot)
+            board.give_piece()
         elif isinstance(move, CandidateMove):
-            self.board.move_piece(move.to_spot, move.from_spot, self.current_player)
+            board.move_piece(move.to_spot, move.from_spot, flying=True)
         else:
             raise TypeError(f"Unknown move: {move!r}")
 
         if move.delete_spot:
-            self.board.force_place_piece(
+            board.force_place_piece(
                 move.delete_spot,
                 player=self.other_player,
             )

@@ -10,4 +10,3 @@ PointerAlignment: Right
 ColumnLimit: 100
 AllowShortFunctionsOnASingleLine: false
 ---
-
