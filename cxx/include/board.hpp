@@ -89,7 +89,7 @@ class Board {
         return playerTwoPieces;
     };
 
-    int get_player_pieces_on_hand(int player);
+    int get_player_pieces_on_hand(int player) const;
 
     inline std::vector<int> &getBoard() {
         return board;
@@ -118,13 +118,19 @@ class Board {
     void undo_move(CandidateMove move);
     void undo_move(CandidatePlacement move);
 
-    unsigned int turn_index = 0;
-    unsigned int ply = 0;
+    int get_turn_index() const {
+        return turn_index;
+    };
+    int get_ply() const {
+        return ply;
+    };
 
    private:
     std::vector<int> board;
     int playerOnePieces;
     int playerTwoPieces;
+    unsigned int turn_index = 0;
+    unsigned int ply = 0;
 };
 
 class MoveFinder {
@@ -132,7 +138,7 @@ class MoveFinder {
     MoveFinder(Board *board) : m_board_ptr(board) {
     }
 
-    std::vector<CandidatePlacement> get_phase_one_moves(int player) {
+    std::vector<CandidatePlacement> get_phase_one_moves(int player) const {
         std::vector<CandidatePlacement> moves;
 
         for (int pos = 0; pos < FIELDS; pos++) {
@@ -155,7 +161,7 @@ class MoveFinder {
         return moves;
     }
 
-    std::vector<CandidateMove> get_movement_phase_moves(int player, bool is_flying) {
+    std::vector<CandidateMove> get_movement_phase_moves(int player, bool is_flying) const {
         std::vector<CandidateMove> moves;
 
         for (int from_pos = 0; from_pos < FIELDS; from_pos++) {
@@ -165,8 +171,8 @@ class MoveFinder {
                 if (m_board_ptr->get_owner(to_pos) != EMPTY ||
                     (!is_flying && !m_board_ptr->is_connected(from_pos, to_pos)))
                     continue;
-                m_board_ptr->move_piece_flying(
-                    from_pos, to_pos, player);  // No need to check, we already checked connections
+                // No need to check for connections at this stage anymore.
+                m_board_ptr->move_piece_flying(from_pos, to_pos, player);
                 if (m_board_ptr->check_mill(to_pos, player)) {
                     // Check deletion
                     for (int to_delete = 0; to_delete < FIELDS; to_delete++) {
@@ -183,23 +189,53 @@ class MoveFinder {
         return moves;
     }
 
-    int get_phase() {
+    int get_phase() const {
         // Cannot determine draws!
-        int player = m_board_ptr->turn_index;
+        int player = m_board_ptr->get_turn_index();
         if (m_board_ptr->get_player_pieces_on_hand(player) > 0) {
             return 1;
         }
+        // No valid moves, game is over!
+        if (!has_available_move(player)) return -1;
+
+        // Check win condition for both players
         int piece_cnt = m_board_ptr->pieces_on_board(player);
-        int piece_other = m_board_ptr->pieces_on_board(player^1);
+        int piece_other = m_board_ptr->pieces_on_board(player ^ 1);
         if (piece_cnt < 3 || piece_other < 3) {
-            // Done
-            // TODO: Check for no valid moves.
+            // Done, either we or the other play has insufficient pieces.
             return -1;
         }
         if (piece_cnt == 3) {
             return 3;
         }
         return 2;
+    }
+
+    bool has_available_move(int player) const {
+        if (m_board_ptr->get_player_pieces_on_hand(player) > 0) {
+            // Can still place pieces on the board
+            return true;
+        }
+        int piece_cnt = m_board_ptr->pieces_on_board(player);
+        if (piece_cnt < 0) {
+            // Game is over
+            return false;
+        }
+        // In phase 3, there is always a move!
+        if (piece_cnt == 3) return true;
+        // Phase 2
+        for (int i = 0; i < FIELDS; i++) {
+            int owner = m_board_ptr->get_owner(i);
+            if (owner != player) continue;
+            // Check posslbe valid moves from i->j
+            for (int j : INDEX_CONNECTIONS[i]) {
+                if (m_board_ptr->get_owner(j) == EMPTY) {
+                    // Found a possible move for the player
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
    private:

@@ -6,8 +6,8 @@ board = nnm_board.Board()
 
 # print(dir(board))
 
-# print(board.is_connected(0, 1))
-# print(board.is_connected(1, 0))
+assert board.is_connected(0, 1)
+assert board.is_connected(0, 1) == board.is_connected(1, 0)
 # print(board.is_connected(0, 2))
 
 

@@ -45,9 +45,11 @@ class Rules:
         self.board = board
         self._state_counter = Counter()
         self._move_finder = MoveFinder(board._board)
+        self._is_draw = False
 
     def reset(self):
         self._state_counter.clear()
+        self._is_draw = False
 
     def get_current_player_moves(
         self,
@@ -88,15 +90,9 @@ class Rules:
         return self.board.other_player
 
     def get_phase(self) -> Phase:
-        p = self._move_finder.get_phase()
-        if p == 1:
-            # No draws in Phase 1, short circuit
-            return Phase.ONE
-        # Check for draws
-        high_state = self._state_counter.most_common(1)
-        if high_state and high_state[0][1] >= 3:
+        if self._is_draw:
             return Phase.DRAW
-        return Phase(p)
+        return Phase(self._move_finder.get_phase())
 
     def _iter_to_delete(self):
         for to_delete in self.board.get_owned_player_spots(player=self.other_player):
@@ -147,6 +143,10 @@ class Rules:
             return False
         return True
 
-    def next_turn(self):
+    def next_turn(self) -> None:
+        if self._is_draw:
+            raise RuntimeError("Game is a draw, cannot start next turn")
         state = self.board.get_board_state()
         self._state_counter[state] += 1
+        if self._state_counter[state] >= 3:
+            self._is_draw = True

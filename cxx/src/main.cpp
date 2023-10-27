@@ -10,8 +10,8 @@ PYBIND11_MODULE(nnm_board, m) {
     py::class_<Board>(m, "Board")
         .def(py::init<>())
         // Attributes
-        .def_readonly("turn_index", &Board::turn_index)
-        .def_readonly("ply", &Board::ply)
+        .def_property_readonly("turn_index", &Board::get_turn_index)
+        .def_property_readonly("ply", &Board::get_ply)
         // Methods
         .def("toggle_turn", &Board::toggle_turn)
         .def("reverse_turn", &Board::reverse_turn)

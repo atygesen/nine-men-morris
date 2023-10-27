@@ -37,7 +37,6 @@ class MinimaxAI:
             if best_move is None or score > best_score:
                 best_score = score
                 best_move = move
-        print("Best score", best_score)
         return best_move
 
     def get_hand_pieces(self):

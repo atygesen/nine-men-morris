@@ -15,7 +15,7 @@ void Board::reset() {
 
 int Board::pieces_on_board(int player) const {
     int sum = 0;
-    for (size_t i = 0; i < board.size(); i++) {
+    for (size_t i = 0; i < FIELDS; i++) {
         if (board[i] == player) ++sum;
     }
     return sum;
@@ -109,9 +109,7 @@ void Board::move_piece_flying(int from, int to, int player) {
 
 bool Board::is_connected(int pos1, int pos2) {
     if (pos1 > pos2) {
-        int tmp = pos2;
-        pos2 = pos1;
-        pos1 = tmp;
+        std::swap(pos1, pos2);
     }
     for (auto &c : ALL_CONNECTIONS) {
         if (c.pos1 == pos1 && c.pos2 == pos2) return true;
@@ -143,7 +141,7 @@ bool Board::check_mill(int position, int player) {
     return false;
 }
 
-int Board::get_player_pieces_on_hand(int player) {
+int Board::get_player_pieces_on_hand(int player) const {
     if (player == 0) {
         return playerOnePieces;
     } else if (player == 1) {
