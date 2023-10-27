@@ -22,31 +22,23 @@ int Board::pieces_on_board(int player) const {
 }
 
 void Board::place_piece(int position, int player) {
-    if (position < 24) {
-        if (board[position] == EMPTY) {
-            board[position] = player;
-            if (player == 0) {
-                playerOnePieces--;
-            } else {
-                playerTwoPieces--;
-            }
+    if (is_available(position)) {
+        board[position] = player;
+        if (player == 0) {
+            playerOnePieces--;
         } else {
-            throw std::invalid_argument("Position already occupied!");
+            playerTwoPieces--;
         }
     } else {
-        throw std::out_of_range("Invalid position!");
+        throw std::invalid_argument("Position already occupied!");
     }
 }
 
 void Board::temp_place_piece(int position, int player) {
-    if (position < 24) {
-        if (board[position] == EMPTY) {
-            board[position] = player;
-        } else {
-            throw std::invalid_argument("Position already occupied!");
-        }
+    if (is_available(position)) {
+        board[position] = player;
     } else {
-        throw std::out_of_range("Invalid position!");
+        throw std::invalid_argument("Position already occupied!");
     }
 }
 
@@ -150,23 +142,18 @@ int Board::get_player_pieces_on_hand(int player) const {
     throw std::invalid_argument("Invalid player");
 }
 
-bool Board::is_available(int pos) {
-    if (pos >= 0 && pos < 24) {
-        return board[pos] == EMPTY;
-    } else {
-        throw std::out_of_range("Out of range");
-    }
-}
-
-int Board::get_board_hash() {
+int Board::get_board_hash() const {
     // Inspired by https://stackoverflow.com/a/22430045
-    int hash = 0;
+    unsigned int hash = 0;
 
-    hash = 31 * hash + playerOnePieces;
-    hash = 31 * hash + playerTwoPieces;
+    // Include some turn state.
+    hash = 31 * hash + (unsigned)turn_index;
+    hash = 31 * hash + (unsigned)playerOnePieces;
+    hash = 31 * hash + (unsigned)playerTwoPieces;
 
-    for (int i : board) {
-        hash = ((31 * hash) + i);
+    // State of the pieces on the board.
+    for (unsigned int i : board) {
+        hash = (31 * hash) + i;
     }
     return hash;
 }
@@ -193,7 +180,7 @@ void Board::undo_move(CandidatePlacement move) {
     remove_piece(move.pos, -1);
     give_piece();
     if (move.delete_pos != EMPTY) {
-        temp_place_piece(move.delete_pos, this->turn_index^1);
+        temp_place_piece(move.delete_pos, this->turn_index ^ 1);
     }
 }
 
@@ -201,6 +188,6 @@ void Board::undo_move(CandidateMove move) {
     reverse_turn();
     move_piece_flying(move.to_pos, move.from_pos);
     if (move.delete_pos != EMPTY) {
-        temp_place_piece(move.delete_pos, this->turn_index^1);
+        temp_place_piece(move.delete_pos, this->turn_index ^ 1);
     }
 }

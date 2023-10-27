@@ -146,7 +146,7 @@ class Rules:
     def next_turn(self) -> None:
         if self._is_draw:
             raise RuntimeError("Game is a draw, cannot start next turn")
-        state = self.board.get_board_state()
+        state = self.board.get_board_hash()
         self._state_counter[state] += 1
         if self._state_counter[state] >= 3:
             self._is_draw = True

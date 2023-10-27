@@ -1,7 +1,5 @@
 from __future__ import annotations
 import nnm_board
-import functools
-import operator
 
 from typing import Any
 
@@ -117,11 +115,8 @@ class Board:
     def ply(self) -> int:
         return self._board.ply
 
-    def get_board_state(self) -> int:
-        def yield_hashes():
-            yield self._turn_index
-            yield self._board.get_board_hash()
-        return functools.reduce(operator.xor, map(hash, yield_hashes()))
+    def get_board_hash(self) -> int:
+        return self._board.get_board_hash()
     
     def reset(self) -> None:
         self._board.reset()

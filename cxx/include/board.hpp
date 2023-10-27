@@ -95,13 +95,16 @@ class Board {
         return board;
     };
 
-    bool is_available(int pos);
+    inline bool is_available(int pos) const {
+        return board.at(pos) == EMPTY;
+    };
 
     inline int get_owner(int pos) {
+        // Used frequently, so we don't do a bounds check
         return board[pos];
     };
 
-    int get_board_hash();
+    int get_board_hash() const;
 
     void toggle_turn() {
         this->turn_index ^= 1;
@@ -195,8 +198,6 @@ class MoveFinder {
         if (m_board_ptr->get_player_pieces_on_hand(player) > 0) {
             return 1;
         }
-        // No valid moves, game is over!
-        if (!has_available_move(player)) return -1;
 
         // Check win condition for both players
         int piece_cnt = m_board_ptr->pieces_on_board(player);
@@ -205,9 +206,12 @@ class MoveFinder {
             // Done, either we or the other play has insufficient pieces.
             return -1;
         }
+        // We know we're in phase 3, no need to look for a valid move.
         if (piece_cnt == 3) {
             return 3;
         }
+        // No valid moves, game is over!
+        if (!has_available_move(player)) return -1;
         return 2;
     }
 

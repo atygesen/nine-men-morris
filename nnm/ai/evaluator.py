@@ -32,10 +32,6 @@ class Evaluator:
         self._eva.set_brain(val)
 
     def evaluate(self) -> float:
-        # phase = self.get_phase()
-        # # print(self.coefficients[phase])
-        # if phase <= 0:
-        #     return 0
         return self._eva.evaluate()
 
     def load_brain(self, fname="brain.json") -> None:

@@ -18,7 +18,7 @@ class MinimaxAI:
         self._cache = dict()
         self.evaluator = Evaluator(self.board, me, rules)
 
-    def clear(self):
+    def clear(self) -> None:
         self._cache.clear()
 
     @property
@@ -43,7 +43,7 @@ class MinimaxAI:
         return self.board.get_piece_counts()
 
     def minimax(self, depth: int, alpha: float, beta: float, is_maximizing: bool):
-        key = self.board.get_board_state()
+        key = self.board.get_board_hash()
         if key in self._cache:
             return self._cache[key]
         
