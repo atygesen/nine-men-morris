@@ -16,7 +16,7 @@ screen = pygame.display.set_mode((860, 860))
 game = NineMenMorris(screen)
 
 player = game.board.players[0]
-ai = MinimaxAI(game.board.players[0], game.board.players[1], game.rules, max_depth=4)
+ai = MinimaxAI(game.board.players[0], game.rules, max_depth=4)
 player.ai = ai
 eva = ai.evaluator
 
@@ -48,8 +48,8 @@ def get_score(result, turns):
     #     s *= -1
 
     board = game.board
-    my_p = board.get_player_piece_counts(player)
-    other_p = board.get_player_piece_counts(other_player)
+    my_p = board.get_player_pieces_on_board(player)
+    other_p = board.get_player_pieces_on_board(other_player)
 
     s = abs(my_p - other_p)
 
@@ -112,27 +112,33 @@ is_initial = True
 best_brain = None
 best_score = float("-inf")
 while running:
-    if idx == 0:
-        with open(storage, "w") as fd:
-            json.dump(brains, fd, indent=4)
-        if best_score > 0:
-            other_player.ai.evaluator.load_brain()
-        if pops:
-            # Get best pop
-            print("pop won {:.2f}%".format(sum(1 for s in pop_scores if s > 0)/len(pop_scores)*100))
-            best_i = np.argmax(pop_scores)
-            if max(pop_scores) >= 0:
-                best_score = max(pop_scores)
-                best_brain = pops[best_i]
-            eva.set_brain(best_brain)
-            print("Scores:", pop_scores)
-        b = eva.get_brain()
-        pops = ga.generate_pops(b)
-        pop_scores.clear()
-        print(f"Generated new pop of length {len(pops)}")
-    brain = pops[idx]
-    eva.set_brain(brain)
+    # if idx == 0:
+    #     with open(storage, "w") as fd:
+    #         json.dump(brains, fd, indent=4)
+    #     if best_score > 0:
+    #         other_player.ai.evaluator.load_brain()
+    #     if pops:
+    #         # Get best pop
+    #         print("pop won {:.2f}%".format(sum(1 for s in pop_scores if s > 0)/len(pop_scores)*100))
+    #         best_i = np.argmax(pop_scores)
+    #         if max(pop_scores) >= 0:
+    #             best_score = max(pop_scores)
+    #             best_brain = pops[best_i]
+    #         eva.set_brain(best_brain)
+    #         print("Scores:", pop_scores)
+    #     b = eva.get_brain()
+    #     pops = ga.generate_pops(b)
+    #     pop_scores.clear()
+    #     print(f"Generated new pop of length {len(pops)}")
+    # brain = pops[idx]
+    # eva.set_brain(brain)
+    eva.randomize_brain()
+    # b = [7.052917957305908, 2.7627055644989014, 8.105040550231934, 0.2642062306404114, 6.96130895614624, 3.9879493713378906]
+    # eva.set_brain(b)
+    # other_player.ai.evaluator.randomize_brain()
     play()
+    # other_player.ai.clear()
+    ai.clear()
     pop_scores.append(brains["score"][-1])
     idx = (idx + 1) % ga.n_pops
 

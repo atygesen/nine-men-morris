@@ -28,6 +28,14 @@ PYBIND11_MODULE(nnm_board, m) {
         .def("move_piece_flying", py::overload_cast<int, int>(&Board::move_piece_flying))
         .def("remove_piece", py::overload_cast<int, int>(&Board::remove_piece))
         .def("remove_piece", py::overload_cast<int>(&Board::remove_piece))
+
+        .def("execute_move", py::overload_cast<CandidateMove>(&Board::execute_move))
+        .def("execute_move", py::overload_cast<CandidatePlacement>(&Board::execute_move))
+
+        .def("undo_move", py::overload_cast<CandidatePlacement>(&Board::undo_move))
+        .def("undo_move", py::overload_cast<CandidateMove>(&Board::undo_move))
+
+
         // Helper stuff
         .def("can_delete", &Board::can_delete)
         .def("give_piece", &Board::give_piece)
@@ -51,8 +59,12 @@ PYBIND11_MODULE(nnm_board, m) {
         .def_readonly("to_pos", &CandidateMove::to_pos)
         .def_readonly("delete_pos", &CandidateMove::delete_pos);
 
+    py::class_<CandidatePlacement>(m, "CppCandidatePlacement")
+        .def_readonly("pos", &CandidatePlacement::pos)
+        .def_readonly("delete_pos", &CandidatePlacement::delete_pos);
+
     py::class_<Evaluator>(m, "Evaluator")
-        .def(py::init<Board *, int, int>())
+        .def(py::init<Board *, int>())
         .def("evaluate", &Evaluator::evaluate)
         .def("brain_size", &Evaluator::brain_size)
         .def("get_brain", &Evaluator::get_brain)

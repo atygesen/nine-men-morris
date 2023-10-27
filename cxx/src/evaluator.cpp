@@ -5,13 +5,13 @@ float Evaluator::evaluate() const {
 
     score += get_piece_diff() * m_coeffs[0];
 
-    score += get_blocked_pieces(me) * m_coeffs[1];
+    score -= get_blocked_pieces(me) * m_coeffs[1];
     score += get_blocked_pieces(other) * m_coeffs[2];
 
     score += get_central_pieces() * m_coeffs[3];
 
     score += get_two_piece_config(this->me) * m_coeffs[4];
-    score += get_two_piece_config(this->other) * m_coeffs[5];
+    score -= get_two_piece_config(this->other) * m_coeffs[5];
 
     return score;
 }

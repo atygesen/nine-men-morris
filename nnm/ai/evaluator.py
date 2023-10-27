@@ -9,18 +9,17 @@ import itertools
 
 
 class Evaluator:
-    def __init__(self, board: Board, me: Player, other: Player, rules: Rules) -> None:
+    def __init__(self, board: Board, me: Player, rules: Rules) -> None:
         self.board = board
         self.me = me
-        self.other = other
         self.rules = rules
-        self._eva = CppEvaluator(self.board._board, self.me.number, self.other.number)
+        self._eva = CppEvaluator(self.board._board, self.me.number)
 
     def randomize_brain(self) -> None:
         N = self._eva.brain_size()
         brain = []
         for _ in range(N):
-            brain.append(random.uniform(-10, 10))
+            brain.append(random.uniform(0, 10))
         self.set_brain(brain)
 
     def get_phase(self):
@@ -33,10 +32,10 @@ class Evaluator:
         self._eva.set_brain(val)
 
     def evaluate(self) -> float:
-        phase = self.get_phase()
-        # print(self.coefficients[phase])
-        if phase <= 0:
-            return 0
+        # phase = self.get_phase()
+        # # print(self.coefficients[phase])
+        # if phase <= 0:
+        #     return 0
         return self._eva.evaluate()
 
     def load_brain(self, fname="brain.json") -> None:

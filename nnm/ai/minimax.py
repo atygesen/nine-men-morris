@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from nnm.rules.rules import CandidateMove, CandidatePlacement, Rules
+from nnm.rules.rules import CandidateMove, CandidatePlacement, Rules, Phase
 from nnm.board import Player, Board
 from nnm.ai.evaluator import Evaluator
 
@@ -10,13 +10,13 @@ MAX_FLOAT = float("inf")
 
 class MinimaxAI:
     def __init__(
-        self, me: Player, other: Player, rules: Rules, max_depth: int = 3
+        self, me: Player, rules: Rules, max_depth: int = 3
     ) -> None:
         self.rules = rules
         self.max_depth = max_depth
-
+        self.me = me
         self._cache = dict()
-        self.evaluator = Evaluator(self.board, me, other, rules)
+        self.evaluator = Evaluator(self.board, me, rules)
 
     def clear(self):
         self._cache.clear()
@@ -37,6 +37,7 @@ class MinimaxAI:
             if best_move is None or score > best_score:
                 best_score = score
                 best_move = move
+        print("Best score", best_score)
         return best_move
 
     def get_hand_pieces(self):
@@ -48,18 +49,21 @@ class MinimaxAI:
             return self._cache[key]
         
         retval = None
-
-        if self.rules.is_game_over():
-            if is_maximizing:
-                # TODO:  This value seems to be the wrong way around... but it works??!
-                retval = MIN_FLOAT
-            else:
+        phase = self.rules.get_phase()
+        if phase is Phase.DRAW:
+            retval = 0.0
+        elif phase is Phase.DONE:
+            if self.board.get_player_pieces_on_board(self.me) > 2:
+                # Win
                 retval = MAX_FLOAT
+            else:
+                # Loss
+                retval = MIN_FLOAT
         elif depth == self.max_depth:
             retval = self.evaluator.evaluate()
-            # print("Evaluation:", retval)
 
         if retval is not None:
+            # We cache any static evaluations, but not results of a branch
             self._cache[key] = retval
             return retval
 
@@ -85,5 +89,4 @@ class MinimaxAI:
                 if best_eval < alpha:
                     break
                 beta = min(beta, best_eval)
-        self._cache[key] = best_eval
         return best_eval

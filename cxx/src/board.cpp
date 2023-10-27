@@ -1,5 +1,6 @@
 #include "board.hpp"
 
+#include <sstream>
 
 void Board::reset() {
     this->board.resize(FIELDS);
@@ -8,6 +9,8 @@ void Board::reset() {
     }
     playerOnePieces = 9;
     playerTwoPieces = 9;
+    this->ply = 0;
+    this->turn_index = 0;
 }
 
 int Board::pieces_on_board(int player) const {
@@ -17,7 +20,6 @@ int Board::pieces_on_board(int player) const {
     }
     return sum;
 }
-
 
 void Board::place_piece(int position, int player) {
     if (position < 24) {
@@ -49,10 +51,7 @@ void Board::temp_place_piece(int position, int player) {
 }
 
 void Board::remove_piece(int position, int player) {
-    if (position >= FIELDS || position < 0) {
-        throw std::out_of_range("Invalid position!");
-    }
-    int owned_by = board[position];
+    int owned_by = board.at(position);
     if (owned_by == EMPTY) {
         throw std::invalid_argument("Position not owned by anyone.");
     } else if (owned_by == player) {
@@ -102,7 +101,9 @@ void Board::move_piece_flying(int from, int to, int player) {
         board[from] = EMPTY;
         board[to] = player;
     } else {
-        throw std::invalid_argument("Invalid move!");
+        std::stringstream ss;
+        ss << "Invalid move from " << from << " to " << to;
+        throw std::invalid_argument(ss.str());
     }
 }
 
@@ -136,8 +137,7 @@ bool Board::check_mill(int position, int player) {
     auto &checks = SPOT_TO_LINE_CONNECTION.at(position);
 
     for (auto &mill : checks) {
-        if (board[mill.pos1] == player && board[mill.pos2] == player &&
-            board[mill.pos3] == player)
+        if (board[mill.pos1] == player && board[mill.pos2] == player && board[mill.pos3] == player)
             return true;
     }
     return false;
@@ -171,4 +171,38 @@ int Board::get_board_hash() {
         hash = ((31 * hash) + i);
     }
     return hash;
+}
+
+void Board::execute_move(CandidateMove move) {
+    // Assume it's from a generated list, no need to check mills. :)
+    move_piece_flying(move.from_pos, move.to_pos);
+    if (move.delete_pos != EMPTY) {
+        remove_piece(move.delete_pos, -1);
+    }
+    toggle_turn();
+}
+
+void Board::execute_move(CandidatePlacement move) {
+    place_piece(move.pos);
+    if (move.delete_pos != EMPTY) {
+        remove_piece(move.delete_pos, -1);
+    }
+    toggle_turn();
+}
+
+void Board::undo_move(CandidatePlacement move) {
+    reverse_turn();
+    remove_piece(move.pos, -1);
+    give_piece();
+    if (move.delete_pos != EMPTY) {
+        temp_place_piece(move.delete_pos, this->turn_index^1);
+    }
+}
+
+void Board::undo_move(CandidateMove move) {
+    reverse_turn();
+    move_piece_flying(move.to_pos, move.from_pos);
+    if (move.delete_pos != EMPTY) {
+        temp_place_piece(move.delete_pos, this->turn_index^1);
+    }
 }

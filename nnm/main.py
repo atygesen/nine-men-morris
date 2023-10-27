@@ -29,7 +29,7 @@ class NineMenMorris:
 
         ai = RandomAI()
         ai = MinimaxAI(
-            self.board.players[1], self.board.players[0], self.rules, max_depth=3
+            self.board.players[1], self.rules, max_depth=4
         )
         self.board.players[1].ai = ai
         # ai.evaluator.load_brain()
@@ -137,7 +137,7 @@ class NineMenMorris:
 
     def get_winner(self) -> Player:
         players = self.board.players
-        return max(players, key=lambda p: self.board.get_player_piece_counts(p))
+        return max(players, key=lambda p: self.board.get_player_pieces_on_board(p))
 
     def draw(self) -> None:
         self.screen.fill(self.background)

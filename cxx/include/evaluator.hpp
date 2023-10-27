@@ -6,7 +6,9 @@
 
 class Evaluator {
    public:
-    Evaluator(Board *board, int me, int other) : m_board_ptr(board), me(me), other(other){};
+    Evaluator(Board *board, int me) : m_board_ptr(board), me(me) {
+        this->other = me ^ 1;
+    };
 
     float evaluate() const;
 
@@ -29,7 +31,7 @@ class Evaluator {
     Board *m_board_ptr = nullptr;
     int me;
     int other;
-    std::vector<float> m_coeffs = {9.0, 2.0, -2.0, 0.2, 1.0, -1.0};
+    std::vector<float> m_coeffs = {9.0, 2.0, 2.0, 0.2, 1.0, 1.0};
 
     inline float get_piece_diff() const {
         int p1 = m_board_ptr->pieces_on_board(me);

@@ -17,7 +17,7 @@ screen = pygame.display.set_mode((860, 860))
 game = NineMenMorris(screen)
 
 player = game.board.players[0]
-ai = MinimaxAI(game.board.players[0], game.board.players[1], game.rules, max_depth=4)
+ai = MinimaxAI(game.board.players[0], game.rules, max_depth=4)
 player.ai = ai
 eva = ai.evaluator
 
@@ -49,8 +49,8 @@ def get_score(result, turns):
     #     s *= -1
 
     board = game.board
-    my_p = board.get_player_piece_counts(player)
-    other_p = board.get_player_piece_counts(other_player)
+    my_p = board.get_player_pieces_on_board(player)
+    other_p = board.get_player_pieces_on_board(other_player)
 
     s = abs(my_p - other_p)
 

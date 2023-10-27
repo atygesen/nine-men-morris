@@ -135,7 +135,7 @@ class Board:
         self._state_cache = state
         return state
     
-    def get_player_piece_counts(self, player: Player) -> int:
+    def get_player_pieces_on_board(self, player: Player) -> int:
         return self._board.pieces_on_board(player.number)
     
     def get_piece_counts(self) -> tuple[int, int]:
@@ -152,3 +152,9 @@ class Board:
     
     def is_own_piece(self, pos: int) -> bool:
         return self._board.get_owner(pos) == self.current_player.number
+
+    def execute_move(self, move) -> None:
+        self._board.execute_move(move)
+
+    def undo_move(self, move) -> None:
+        self._board.undo_move(move)
