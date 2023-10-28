@@ -46,6 +46,7 @@ class Rules:
         self._state_counter = Counter()
         self._move_finder = MoveFinder(board._board)
         self._is_draw = False
+        self._move_cache = {}
 
     def reset(self):
         self._state_counter.clear()
@@ -57,13 +58,18 @@ class Rules:
         phase = self.get_phase()
         if phase is Phase.DONE:
             return []
+        
+        # key = self.board.get_board_hash()
+        # if key in self._move_cache:
+        #     return self._move_cache[key]
 
         if phase is Phase.ONE:
-            return self.get_phase_one_moves()
+            moves = self.get_phase_one_moves()
         elif phase is Phase.TWO:
-            return self.get_phase_two_moves()
+            moves = self.get_phase_two_moves()
         else:
-            return self.get_phase_three_moves()
+            moves = self.get_phase_three_moves()
+        return moves
 
     def iter_current_moves(self):
         phase = self.get_phase()

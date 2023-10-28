@@ -12,8 +12,7 @@ game.board.toggle_player()
 
 with cProfile.Profile() as pr:
     ai = game.current_player.ai
-    moves = list(game.rules.iter_current_moves())
-    choice = ai.select_move(moves)
+    choice = ai.get_best_move()
     pr.dump_stats("test.prof")
 
 pygame.quit()

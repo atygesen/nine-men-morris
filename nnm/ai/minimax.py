@@ -9,27 +9,28 @@ MAX_FLOAT = float("inf")
 
 
 class MinimaxAI:
-    def __init__(
-        self, me: Player, rules: Rules, max_depth: int = 3
-    ) -> None:
+    def __init__(self, me: Player, rules: Rules, max_depth: int = 3) -> None:
         self.rules = rules
         self.max_depth = max_depth
         self.me = me
         self._cache = dict()
         self.evaluator = Evaluator(self.board, me, rules)
 
-    def clear(self) -> None:
+    def __hash__(self):
+        return self.board.get_board_hash()
+
+    def reset(self) -> None:
         self._cache.clear()
+        self.evaluator.reset()
 
     @property
     def board(self) -> Board:
         return self.rules.board
 
-    def select_move(
-        self, moves: Sequence[CandidatePlacement] | Sequence[CandidateMove]
-    ):
+    def get_best_move(self):
         best_score = MIN_FLOAT
         best_move = None
+        moves = self.rules.get_current_player_moves()
         for move in moves:
             self.rules.execute_move(move)
             score = self.minimax(0, MIN_FLOAT, MAX_FLOAT, False)
@@ -37,16 +38,16 @@ class MinimaxAI:
             if best_move is None or score > best_score:
                 best_score = score
                 best_move = move
+        c = self.evaluator.evaluate.cache_info()
+        ratio = c.hits / (c.hits + c.misses)
+        print(f"cache ratio: {ratio*100:.2f}", )
+        self.evaluator.evaluate.cache_clear()
         return best_move
 
     def get_hand_pieces(self):
         return self.board.get_piece_counts()
 
     def minimax(self, depth: int, alpha: float, beta: float, is_maximizing: bool):
-        key = self.board.get_board_hash()
-        if key in self._cache:
-            return self._cache[key]
-        
         retval = None
         phase = self.rules.get_phase()
         if phase is Phase.DRAW:
@@ -63,7 +64,6 @@ class MinimaxAI:
 
         if retval is not None:
             # We cache any static evaluations, but not results of a branch
-            self._cache[key] = retval
             return retval
 
         # Figure out the optimization rules

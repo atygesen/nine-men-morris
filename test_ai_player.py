@@ -62,7 +62,7 @@ def play():
     global running
 
     game.reset()
-    ai.clear()
+    ai.reset()
 
     # print(eva.get_brain())
 

@@ -117,7 +117,7 @@ class Board:
 
     def get_board_hash(self) -> int:
         return self._board.get_board_hash()
-    
+   
     def reset(self) -> None:
         self._board.reset()
 

@@ -67,6 +67,7 @@ PYBIND11_MODULE(nnm_board, m) {
         .def(py::init<Board *, int>())
         .def("evaluate", &Evaluator::evaluate)
         .def("brain_size", &Evaluator::brain_size)
+        .def("reset", &Evaluator::reset)
         .def("get_brain", &Evaluator::get_brain)
         .def("set_brain", &Evaluator::set_brain);
 }

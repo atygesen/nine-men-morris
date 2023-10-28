@@ -38,6 +38,7 @@ for r in brains["result"]:
 running = True
 other_player = game.board.players[1]
 
+was_win = False
 
 def get_score(result, turns):
     global brains
@@ -58,10 +59,10 @@ def get_score(result, turns):
     return s
 
 def play():
-    global running
+    global running, was_win
 
     game.reset()
-    ai.clear()
+    ai.reset()
 
     print(eva.get_brain())
 
@@ -133,12 +134,12 @@ while running:
     # brain = pops[idx]
     # eva.set_brain(brain)
     eva.randomize_brain()
-    # b = [7.052917957305908, 2.7627055644989014, 8.105040550231934, 0.2642062306404114, 6.96130895614624, 3.9879493713378906]
-    # eva.set_brain(b)
+    b = [4.243272304534912, 5.7935709953308105, 8.130520820617676, 6.326208591461182, 4.55441427230835, 4.719225883483887]
+    eva.set_brain(b)
     # other_player.ai.evaluator.randomize_brain()
     play()
     # other_player.ai.clear()
-    ai.clear()
+    ai.reset()
     pop_scores.append(brains["score"][-1])
     idx = (idx + 1) % ga.n_pops
 

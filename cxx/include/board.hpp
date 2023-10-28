@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "connections.hpp"
+#include "config.hpp"
 
 const int EMPTY = -1;
 const int FIELDS = 24;
@@ -40,7 +41,7 @@ class Board {
     int pieces_on_board(int player) const;
 
     void place_piece(int position) {
-        this->place_piece(position, (int)this->turn_index);
+        this->place_piece(position, this->turn_index);
     }
 
     void place_piece(int position, int player);
@@ -96,7 +97,11 @@ class Board {
     };
 
     inline bool is_available(int pos) const {
+    #ifdef DEBUG_MODE
         return board.at(pos) == EMPTY;
+    #else
+        return board[pos] == EMPTY;
+    #endif
     };
 
     inline int get_owner(int pos) {
@@ -104,7 +109,7 @@ class Board {
         return board[pos];
     };
 
-    int get_board_hash() const;
+    std::size_t get_board_hash() const;
 
     void toggle_turn() {
         this->turn_index ^= 1;
@@ -132,7 +137,7 @@ class Board {
     std::vector<int> board;
     int playerOnePieces;
     int playerTwoPieces;
-    unsigned int turn_index = 0;
+    int turn_index = 0;
     unsigned int ply = 0;
 };
 

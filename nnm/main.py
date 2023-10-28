@@ -42,8 +42,7 @@ class NineMenMorris:
         ai: AI = player.ai
         if ai is None:
             raise RuntimeError("Player is not an AI")
-        moves = self.rules.get_current_player_moves()
-        choice = ai.select_move(moves)
+        choice = ai.get_best_move()
         # print("AI choice:", choice)
         self.rules.execute_move(choice)
         # print("State", self.board.get_board_state())

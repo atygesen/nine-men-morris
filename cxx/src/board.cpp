@@ -1,4 +1,6 @@
 #include "board.hpp"
+#include "utils.hpp"
+
 
 #include <sstream>
 
@@ -43,7 +45,11 @@ void Board::temp_place_piece(int position, int player) {
 }
 
 void Board::remove_piece(int position, int player) {
+#ifdef DEBUG_MODE
     int owned_by = board.at(position);
+#else
+    int owned_by = board[position];
+#endif
     if (owned_by == EMPTY) {
         throw std::invalid_argument("Position not owned by anyone.");
     } else if (owned_by == player) {
@@ -74,9 +80,11 @@ bool Board::can_delete(int pos, int player) {
 }
 
 void Board::move_piece(int from, int to, int player) {
+#ifdef DEBUG_MODE
     if (from >= FIELDS || from < 0 || to >= FIELDS || to < 0) {
         throw std::out_of_range("Invalid position!");
     }
+#endif
     if (board[from] == player && board[to] == EMPTY && is_connected(from, to)) {
         board[from] = EMPTY;
         board[to] = player;
@@ -86,10 +94,12 @@ void Board::move_piece(int from, int to, int player) {
 }
 
 void Board::move_piece_flying(int from, int to, int player) {
-    if (from >= FIELDS || from < 0 || to >= FIELDS || to < 0) {
-        throw std::out_of_range("Invalid position!");
-    }
-    if (board[from] == player && board[to] == EMPTY) {
+#ifdef DEBUG_MODE
+    if (board.at(from) == player && board.at(to) == EMPTY)
+#else
+    if (board[from] == player && board[to] == EMPTY)
+#endif
+    {
         board[from] = EMPTY;
         board[to] = player;
     } else {
@@ -142,20 +152,19 @@ int Board::get_player_pieces_on_hand(int player) const {
     throw std::invalid_argument("Invalid player");
 }
 
-int Board::get_board_hash() const {
-    // Inspired by https://stackoverflow.com/a/22430045
-    unsigned int hash = 0;
 
-    // Include some turn state.
-    hash = 31 * hash + (unsigned)turn_index;
-    hash = 31 * hash + (unsigned)playerOnePieces;
-    hash = 31 * hash + (unsigned)playerTwoPieces;
+std::size_t Board::get_board_hash() const {
+     // Inspired by https://stackoverflow.com/a/39269304
 
-    // State of the pieces on the board.
-    for (unsigned int i : board) {
-        hash = (31 * hash) + i;
+    std::size_t seed = 0;
+    hash_combine(seed, turn_index);
+    hash_combine(seed, playerOnePieces);
+    hash_combine(seed, playerTwoPieces);
+
+    for (const int val : board){
+        hash_combine(seed, val);
     }
-    return hash;
+    return seed;
 }
 
 void Board::execute_move(CandidateMove move) {

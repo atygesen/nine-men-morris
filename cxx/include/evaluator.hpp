@@ -3,6 +3,7 @@
 
 #include "board.hpp"
 #include "connections.hpp"
+#include "unordered_map"
 
 class Evaluator {
    public:
@@ -10,21 +11,26 @@ class Evaluator {
         this->other = me ^ 1;
     };
 
-    float evaluate() const;
+    float evaluate();
 
     int brain_size() const {
         return this->m_coeffs.size();
     };
 
-    void set_brain(std::vector<float> brain) {
+    void set_brain(const std::vector<float> &brain) {
         if (brain.size() != m_coeffs.size()) {
             throw std::invalid_argument("Invalid size of brain!");
         }
-        this->m_coeffs = brain;
+        for (size_t i=0; i<brain.size(); i++){
+            m_coeffs[i] = brain[i];
+        }
     };
 
     std::vector<float> get_brain() const {
         return this->m_coeffs;
+    }
+
+    void reset() {
     }
 
    private:

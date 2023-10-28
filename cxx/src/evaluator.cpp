@@ -1,6 +1,7 @@
 #include "evaluator.hpp"
 
-float Evaluator::evaluate() const {
+float Evaluator::evaluate() {
+
     float score = 0.0;
 
     score += get_piece_diff() * m_coeffs[0];

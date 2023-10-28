@@ -5,7 +5,7 @@ from nnm_board import Evaluator as CppEvaluator
 import random
 import json
 from pathlib import Path
-import itertools
+import functools
 
 
 class Evaluator:
@@ -14,6 +14,12 @@ class Evaluator:
         self.me = me
         self.rules = rules
         self._eva = CppEvaluator(self.board._board, self.me.number)
+
+    def reset(self) -> None:
+        self._eva.reset()
+
+    def __hash__(self) -> int:
+        return self.board.get_board_hash() + 1001235
 
     def randomize_brain(self) -> None:
         N = self._eva.brain_size()
@@ -31,6 +37,7 @@ class Evaluator:
     def set_brain(self, val: list[float]) -> None:
         self._eva.set_brain(val)
 
+    @functools.lru_cache(maxsize=2*2048)
     def evaluate(self) -> float:
         return self._eva.evaluate()
 
